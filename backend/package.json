@@ -1,0 +1,44 @@
+{
+  "name": "lechugas-finance-backend",
+  "version": "1.0.0",
+  "description": "Lechugas Finance API — Fastify + tRPC + Prisma",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsup src/server.ts --format esm --outDir dist --dts",
+    "start": "node dist/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx src/lib/seed.ts"
+  },
+  "keywords": [],
+  "author": "Lechugas Web",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/multipart": "^10.0.0",
+    "@fastify/static": "^9.1.0",
+    "@trpc/client": "^11.16.0",
+    "@trpc/server": "^11.16.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.1",
+    "fastify": "^5.8.4",
+    "jose": "^6.2.2",
+    "sharp": "^0.34.5",
+    "winston": "^3.19.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@prisma/client": "^5.22.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^25.5.2",
+    "prisma": "5.22.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0"
+  }
+}

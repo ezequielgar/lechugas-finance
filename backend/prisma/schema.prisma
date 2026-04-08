@@ -1,0 +1,627 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// AUTH & USUARIOS
+// ─────────────────────────────────────────────
+
+enum RolUsuario {
+  ADMIN
+  USER
+}
+
+model User {
+  id                 String     @id @default(cuid())
+  email              String     @unique
+  username           String     @unique
+  passwordHash       String
+  displayName        String?
+  avatarUrl          String?
+  rol                RolUsuario @default(USER)
+  aprobado           Boolean    @default(true)
+  mustChangePassword Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  tarjetas         Tarjeta[]
+  ingresos         Ingreso[]
+  gastosFijos      GastoFijo[]
+  inversiones      Inversion[]
+  creditos         Credito[]
+  proyectos        Proyecto[]
+  deseos           Deseo[]
+  vacaciones       Vacacion[]
+  boards           Board[]
+  boardMemberships BoardMember[]
+  listasSuper      ListaSuper[]
+  boardInvitations BoardInvitation[]
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: TARJETAS
+// ─────────────────────────────────────────────
+
+model Tarjeta {
+  id            String      @id @default(cuid())
+  userId        String
+  nombreEntidad String
+  nombreTarjeta String
+  tipo          TipoTarjeta
+  red           RedTarjeta
+  ultimos4      String?
+  color         String?
+  modoSimple    Boolean     @default(false)
+  activa        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  compras       ComprarTarjeta[]
+  pagos         PagoTarjeta[]
+  gastosTarjeta GastoTarjeta[]
+
+  @@index([userId])
+}
+
+enum TipoTarjeta {
+  CREDITO
+  DEBITO
+  PREPAGA
+}
+
+enum RedTarjeta {
+  VISA
+  MASTERCARD
+  AMEX
+  CABAL
+  NARANJA
+  OTRA
+}
+
+model ComprarTarjeta {
+  id                String   @id @default(cuid())
+  tarjetaId         String
+  descripcion       String
+  comercio          String?
+  categoria         String?
+  monto             Decimal  @db.Decimal(12, 2)
+  moneda            String   @default("ARS")
+  cuotas            Int      @default(1)
+  montoCuota        Decimal  @db.Decimal(12, 2)
+  fechaCompra       DateTime
+  fechaPrimeraCuota DateTime?
+  cuotasPagadas     Int      @default(0)
+  notas             String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tarjeta Tarjeta @relation(fields: [tarjetaId], references: [id], onDelete: Cascade)
+
+  @@index([tarjetaId])
+  @@index([fechaCompra])
+}
+
+model PagoTarjeta {
+  id          String   @id @default(cuid())
+  tarjetaId   String
+  monto       Decimal  @db.Decimal(12, 2)
+  moneda      String   @default("ARS")
+  fechaPago   DateTime
+  descripcion String?
+  tipo        TipoPago @default(PAGO_MINIMO)
+  createdAt   DateTime @default(now())
+
+  tarjeta Tarjeta @relation(fields: [tarjetaId], references: [id], onDelete: Cascade)
+
+  @@index([tarjetaId])
+}
+
+enum TipoPago {
+  PAGO_TOTAL
+  PAGO_MINIMO
+  PAGO_PARCIAL
+}
+
+model GastoTarjeta {
+  id          String   @id @default(cuid())
+  tarjetaId   String
+  descripcion String
+  monto       Decimal  @db.Decimal(12, 2)
+  moneda      String   @default("ARS")
+  fecha       DateTime
+  tipo        String
+  createdAt   DateTime @default(now())
+
+  tarjeta Tarjeta @relation(fields: [tarjetaId], references: [id], onDelete: Cascade)
+
+  @@index([tarjetaId])
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: INGRESOS
+// ─────────────────────────────────────────────
+
+model Ingreso {
+  id          String      @id @default(cuid())
+  userId      String
+  descripcion String
+  tipo        TipoIngreso
+  monto       Decimal     @db.Decimal(12, 2)
+  moneda      String      @default("ARS")
+  fecha       DateTime
+  recurrente  Boolean     @default(false)
+  frecuencia  String?
+  activo      Boolean     @default(true)
+  notas       String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([fecha])
+}
+
+enum TipoIngreso {
+  SUELDO
+  FREELANCE
+  ALQUILER
+  INVERSION
+  REGALO
+  BONO
+  OTRO
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: GASTOS FIJOS (SERVICIOS)
+// ─────────────────────────────────────────────
+
+model GastoFijo {
+  id        String         @id @default(cuid())
+  userId    String
+  nombre    String
+  proveedor String?
+  categoria CategoriaGasto
+  activo    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  registros RegistroGastoFijo[]
+
+  @@index([userId])
+}
+
+enum CategoriaGasto {
+  ELECTRICIDAD
+  GAS
+  AGUA
+  INTERNET
+  TELEFONO
+  ALQUILER
+  EXPENSAS
+  STREAMING
+  GIMNASIO
+  SEGURO
+  TRANSPORTE
+  EDUCACION
+  SALUD
+  OTRO
+}
+
+model RegistroGastoFijo {
+  id               String    @id @default(cuid())
+  gastoFijoId      String
+  monto            Decimal   @db.Decimal(12, 2)
+  moneda           String    @default("ARS")
+  fecha            DateTime
+  fechaPago        DateTime?
+  fechaVencimiento DateTime?
+  pagado           Boolean   @default(false)
+  notas            String?
+  createdAt        DateTime  @default(now())
+
+  gastoFijo GastoFijo @relation(fields: [gastoFijoId], references: [id], onDelete: Cascade)
+
+  @@index([gastoFijoId])
+  @@index([fecha])
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: INVERSIONES
+// ─────────────────────────────────────────────
+
+model Inversion {
+  id               String        @id @default(cuid())
+  userId           String
+  nombre           String
+  tipo             TipoInversion
+  montoInicial     Decimal       @db.Decimal(12, 2)
+  moneda           String        @default("ARS")
+  fechaInicio      DateTime
+  fechaVencimiento DateTime?
+  activa           Boolean       @default(true)
+  notas            String?       @db.Text
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movimientos MovimientoInversion[]
+
+  @@index([userId])
+}
+
+enum TipoInversion {
+  PLAZO_FIJO
+  ACCIONES
+  CRYPTO
+  FONDO_COMUN
+  DOLAR
+  INMUEBLE
+  OTRO
+}
+
+model MovimientoInversion {
+  id          String    @id @default(cuid())
+  inversionId String
+  tipo        String
+  monto       Decimal   @db.Decimal(12, 2)
+  moneda      String    @default("ARS")
+  fecha       DateTime
+  descripcion String?
+  createdAt   DateTime  @default(now())
+
+  inversion Inversion @relation(fields: [inversionId], references: [id], onDelete: Cascade)
+
+  @@index([inversionId])
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: CRÉDITOS / PRÉSTAMOS
+// ─────────────────────────────────────────────
+
+model Credito {
+  id            String   @id @default(cuid())
+  userId        String
+  nombre        String
+  entidad       String?
+  montoOriginal Decimal  @db.Decimal(12, 2)
+  moneda        String   @default("ARS")
+  cuotasTotal   Int
+  montoCuota    Decimal  @db.Decimal(12, 2)
+  tasaInteres   Decimal? @db.Decimal(6, 4)
+  fechaInicio   DateTime
+  activo        Boolean  @default(true)
+  notas         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pagos PagoCredito[]
+
+  @@index([userId])
+}
+
+model PagoCredito {
+  id           String    @id @default(cuid())
+  creditoId    String
+  numeroCuota  Int
+  monto        Decimal   @db.Decimal(12, 2)
+  fechaPago    DateTime
+  pagado       Boolean   @default(false)
+  fechaPagado  DateTime?
+  notas        String?
+  createdAt    DateTime  @default(now())
+
+  credito Credito @relation(fields: [creditoId], references: [id], onDelete: Cascade)
+
+  @@index([creditoId])
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: PROYECTOS
+// ─────────────────────────────────────────────
+
+model Proyecto {
+  id            String         @id @default(cuid())
+  userId        String
+  nombre        String
+  descripcion   String?        @db.Text
+  presupuesto   Decimal?       @db.Decimal(12, 2)
+  moneda        String         @default("ARS")
+  estado        EstadoProyecto @default(PLANIFICANDO)
+  fechaInicio   DateTime?
+  fechaObjetivo DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gastos GastoProyecto[]
+
+  @@index([userId])
+}
+
+enum EstadoProyecto {
+  PLANIFICANDO
+  EN_PROGRESO
+  PAUSADO
+  COMPLETADO
+  CANCELADO
+}
+
+model GastoProyecto {
+  id          String   @id @default(cuid())
+  proyectoId  String
+  descripcion String
+  monto       Decimal  @db.Decimal(12, 2)
+  moneda      String   @default("ARS")
+  fecha       DateTime
+  categoria   String?
+  createdAt   DateTime @default(now())
+
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+
+  @@index([proyectoId])
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: DESEOS (WISH LIST)
+// ─────────────────────────────────────────────
+
+model Deseo {
+  id            String    @id @default(cuid())
+  userId        String
+  nombre        String
+  descripcion   String?
+  precio        Decimal?  @db.Decimal(12, 2)
+  moneda        String    @default("ARS")
+  urlProducto   String?
+  imagen        String?
+  prioridad     Int       @default(3)
+  completado    Boolean   @default(false)
+  fechaObjetivo DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: VACACIONES
+// ─────────────────────────────────────────────
+
+model Vacacion {
+  id           String    @id @default(cuid())
+  userId       String
+  destino      String
+  descripcion  String?   @db.Text
+  presupuesto  Decimal?  @db.Decimal(12, 2)
+  moneda       String    @default("ARS")
+  fechaSalida  DateTime?
+  fechaRegreso DateTime?
+  completada   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ahorros AhorroVacacion[]
+  gastos  GastoVacacion[]
+
+  @@index([userId])
+}
+
+model AhorroVacacion {
+  id         String   @id @default(cuid())
+  vacacionId String
+  monto      Decimal  @db.Decimal(12, 2)
+  fecha      DateTime
+  notas      String?
+  createdAt  DateTime @default(now())
+
+  vacacion Vacacion @relation(fields: [vacacionId], references: [id], onDelete: Cascade)
+}
+
+model GastoVacacion {
+  id          String   @id @default(cuid())
+  vacacionId  String
+  descripcion String
+  monto       Decimal  @db.Decimal(12, 2)
+  moneda      String   @default("ARS")
+  fecha       DateTime
+  categoria   String?
+  createdAt   DateTime @default(now())
+
+  vacacion Vacacion @relation(fields: [vacacionId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: BOARDS COMPARTIDOS
+// ─────────────────────────────────────────────
+
+model Board {
+  id          String   @id @default(cuid())
+  nombre      String
+  descripcion String?
+  ownerId     String
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members     BoardMember[]
+  movimientos BoardMovimiento[]
+  invitations BoardInvitation[]
+
+  @@index([ownerId])
+}
+
+model BoardMember {
+  id         String   @id @default(cuid())
+  boardId    String
+  userId     String
+  porcentaje Decimal  @db.Decimal(5, 2) @default(50.00)
+  rol        RolBoard @default(MIEMBRO)
+  joinedAt   DateTime @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, userId])
+  @@index([boardId])
+  @@index([userId])
+}
+
+enum RolBoard {
+  ADMIN
+  MIEMBRO
+}
+
+model BoardInvitation {
+  id            String           @id @default(cuid())
+  boardId       String
+  invitedById   String
+  invitedUserId String?
+  invitedEmail  String
+  codigo        String           @unique
+  estado        EstadoInvitacion @default(PENDIENTE)
+  expiresAt     DateTime
+  createdAt     DateTime         @default(now())
+
+  board     Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+  @@index([codigo])
+}
+
+enum EstadoInvitacion {
+  PENDIENTE
+  ACEPTADA
+  RECHAZADA
+  EXPIRADA
+}
+
+model BoardMovimiento {
+  id           String              @id @default(cuid())
+  boardId      String
+  descripcion  String
+  tipo         TipoMovimientoBoard
+  monto        Decimal             @db.Decimal(12, 2)
+  moneda       String              @default("ARS")
+  fecha        DateTime
+  distribucion String?             @db.Text
+  notas        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+  @@index([fecha])
+}
+
+enum TipoMovimientoBoard {
+  INGRESO
+  GASTO
+}
+
+// ─────────────────────────────────────────────
+// MÓDULO: LISTA DE SUPERMERCADO
+// ─────────────────────────────────────────────
+
+model ListaSuper {
+  id           String      @id @default(cuid())
+  userId       String
+  nombre       String
+  supermercado String?
+  estado       EstadoLista @default(ACTIVA)
+  boardId      String?
+  fechaCompra  DateTime?
+  montoTotal   Decimal?    @db.Decimal(12, 2)
+  notas        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items ItemListaSuper[]
+
+  @@index([userId])
+}
+
+enum EstadoLista {
+  ACTIVA
+  COMPLETADA
+  ARCHIVADA
+}
+
+model ItemListaSuper {
+  id             String   @id @default(cuid())
+  listaId        String
+  productoId     String
+  cantidad       Decimal  @db.Decimal(8, 3)
+  unidad         String   @default("unidad")
+  precioUnitario Decimal? @db.Decimal(12, 2)
+  precioFinal    Decimal? @db.Decimal(12, 2)
+  descuentoTipo  String?
+  descuentoValor Decimal? @db.Decimal(6, 2)
+  tienePromo     Boolean  @default(false)
+  comprado       Boolean  @default(false)
+  notas          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lista    ListaSuper    @relation(fields: [listaId], references: [id], onDelete: Cascade)
+  producto ProductoSuper @relation(fields: [productoId], references: [id])
+
+  @@index([listaId])
+  @@index([productoId])
+}
+
+model ProductoSuper {
+  id           String   @id @default(cuid())
+  nombre       String
+  marca        String?
+  categoria    String?
+  unidadBase   String   @default("unidad")
+  codigoBarras String?  @unique
+  imagen       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items   ItemListaSuper[]
+  precios PrecioProducto[]
+
+  @@index([nombre])
+}
+
+model PrecioProducto {
+  id                  String   @id @default(cuid())
+  productoId          String
+  supermercado        String
+  precio              Decimal  @db.Decimal(12, 2)
+  moneda              String   @default("ARS")
+  fecha               DateTime @default(now())
+  tienePrecioAnterior Boolean  @default(false)
+  precioAnterior      Decimal? @db.Decimal(12, 2)
+  variacionPct        Decimal? @db.Decimal(6, 2)
+  conDescuento        Boolean  @default(false)
+  tipoDescuento       String?
+  valorDescuento      Decimal? @db.Decimal(6, 2)
+  createdAt           DateTime @default(now())
+
+  producto ProductoSuper @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@index([productoId])
+  @@index([supermercado])
+  @@index([fecha])
+}

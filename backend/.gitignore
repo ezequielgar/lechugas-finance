@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+*.log
+prisma/generated/
+# User-uploaded product images (do not commit to git)
+uploads/products/

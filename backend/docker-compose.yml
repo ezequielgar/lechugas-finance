@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:10.11
+    container_name: lechugas_finance_db_local
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_DATABASE: finance_db
+      MYSQL_USER: finance_user
+      MYSQL_PASSWORD: finance_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data_local:/var/lib/mysql
+
+volumes:
+  db_data_local:
