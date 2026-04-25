@@ -173,7 +173,7 @@ export function DegeneradoFiscalPage() {
       <div className="md:col-span-2 space-y-6">
 
         {/* Mini summary cards */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="card p-4">
             <p className="text-[10px] font-black text-brand-500 uppercase tracking-widest mb-2">Ingresos</p>
             <p className="text-2xl font-black text-white tabular-nums">{fmt(totalIngresos)}</p>

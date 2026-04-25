@@ -9,8 +9,8 @@ const createInversionSchema = z.object({
   tipo: z.enum(['PLAZO_FIJO', 'ACCIONES', 'CRYPTO', 'FONDO_COMUN', 'DOLAR', 'INMUEBLE', 'OTRO']),
   montoInicial: z.number().positive('El monto debe ser positivo'),
   moneda: z.string().default('ARS'),
-  fechaInicio: z.string().transform((s) => new Date(s)),
-  fechaVencimiento: z.string().transform((s) => new Date(s)).optional(),
+  fechaInicio: z.string().transform((s) => new Date(s + 'T12:00:00.000Z')),
+  fechaVencimiento: z.string().transform((s) => new Date(s + 'T12:00:00.000Z')).optional(),
   notas: z.string().optional(),
 })
 
@@ -23,7 +23,7 @@ const addMovimientoSchema = z.object({
   tipo: z.enum(['DEPOSITO', 'RETIRO', 'RENDIMIENTO', 'ACTUALIZACION']),
   monto: z.number().positive('El monto debe ser positivo'),
   moneda: z.string().default('ARS'),
-  fecha: z.string().transform((s) => new Date(s)),
+  fecha: z.string().transform((s) => new Date(s + 'T12:00:00.000Z')),
   descripcion: z.string().optional(),
 })
 

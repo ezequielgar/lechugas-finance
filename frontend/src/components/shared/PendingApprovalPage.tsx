@@ -18,7 +18,7 @@ export function PendingApprovalPage() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md relative"
       >
-        <div className="card p-8 shadow-2xl shadow-black/40 text-center space-y-6">
+        <div className="card p-5 sm:p-8 shadow-2xl shadow-black/40 text-center space-y-6">
           {/* Logo */}
           <div className="flex items-center justify-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center">

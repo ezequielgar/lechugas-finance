@@ -290,7 +290,7 @@ function BoardDetail({
       </div>
 
       {/* Resumen financiero */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="card p-4 text-center">
           <TrendingUp size={18} className="text-green-400 mx-auto mb-1" />
           <p className="text-xs text-slate-500 font-medium">Ingresos</p>
@@ -563,7 +563,7 @@ export function BoardsPage() {
 
       {/* Stats globales */}
       {boardsRaw.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="card p-3 text-center">
             <p className="text-xs text-slate-500">Boards</p>
             <p className="text-xl font-bold text-brand-400">{boardsRaw.length}</p>

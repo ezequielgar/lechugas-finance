@@ -9,8 +9,8 @@ const createVacacionSchema = z.object({
   descripcion: z.string().optional(),
   presupuesto: z.number().positive().optional(),
   moneda: z.string().default('ARS'),
-  fechaSalida: z.string().transform(s => new Date(s)).optional(),
-  fechaRegreso: z.string().transform(s => new Date(s)).optional(),
+  fechaSalida: z.string().transform(s => new Date(s + 'T12:00:00.000Z')).optional(),
+  fechaRegreso: z.string().transform(s => new Date(s + 'T12:00:00.000Z')).optional(),
 })
 
 const updateVacacionSchema = z.object({
@@ -19,14 +19,14 @@ const updateVacacionSchema = z.object({
   descripcion: z.string().optional().nullable(),
   presupuesto: z.number().positive().optional().nullable(),
   moneda: z.string().optional(),
-  fechaSalida: z.string().transform(s => new Date(s)).optional().nullable(),
-  fechaRegreso: z.string().transform(s => new Date(s)).optional().nullable(),
+  fechaSalida: z.string().transform(s => new Date(s + 'T12:00:00.000Z')).optional().nullable(),
+  fechaRegreso: z.string().transform(s => new Date(s + 'T12:00:00.000Z')).optional().nullable(),
 })
 
 const addAhorroSchema = z.object({
   vacacionId: z.string(),
   monto: z.number().positive('El monto debe ser positivo'),
-  fecha: z.string().transform(s => new Date(s)),
+  fecha: z.string().transform(s => new Date(s + 'T12:00:00.000Z')),
   notas: z.string().optional(),
 })
 
@@ -35,7 +35,7 @@ const addGastoSchema = z.object({
   descripcion: z.string().min(1, 'La descripción es requerida'),
   monto: z.number().positive('El monto debe ser positivo'),
   moneda: z.string().default('ARS'),
-  fecha: z.string().transform(s => new Date(s)),
+  fecha: z.string().transform(s => new Date(s + 'T12:00:00.000Z')),
   categoria: z.string().optional(),
 })
 

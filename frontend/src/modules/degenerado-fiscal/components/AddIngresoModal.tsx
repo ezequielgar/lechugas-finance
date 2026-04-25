@@ -35,7 +35,6 @@ export function AddIngresoModal({ isOpen, onClose, onSuccess, initialData }: Add
     resolver: zodResolver(schema),
     defaultValues: {
       tipo: 'SUELDO',
-      monto: 0,
       fecha: new Date().toISOString().split('T')[0],
       recurrente: false,
     }
@@ -57,7 +56,6 @@ export function AddIngresoModal({ isOpen, onClose, onSuccess, initialData }: Add
       reset({
         descripcion: '',
         tipo: 'SUELDO',
-        monto: 0,
         fecha: new Date().toISOString().split('T')[0],
         recurrente: false,
       })

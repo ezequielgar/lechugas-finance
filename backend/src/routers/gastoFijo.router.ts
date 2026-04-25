@@ -18,8 +18,8 @@ const updateRecordSchema = z.object({
   id: z.string(),
   monto: z.number().positive('El monto debe ser positivo'),
   moneda: z.string().optional(),
-  fecha: z.string().transform(str => new Date(str)),
-  fechaVencimiento: z.string().transform(str => new Date(str)).optional(),
+  fecha: z.string().transform(str => new Date(str + 'T12:00:00.000Z')),
+  fechaVencimiento: z.string().transform(str => new Date(str + 'T12:00:00.000Z')).optional(),
   notas: z.string().optional(),
 })
 
@@ -27,8 +27,8 @@ const addRecordSchema = z.object({
   gastoFijoId: z.string(),
   monto: z.number().positive('El monto debe ser positivo'),
   moneda: z.string().default('ARS'),
-  fecha: z.string().transform(str => new Date(str)),
-  fechaVencimiento: z.string().transform(str => new Date(str)).optional(),
+  fecha: z.string().transform(str => new Date(str + 'T12:00:00.000Z')),
+  fechaVencimiento: z.string().transform(str => new Date(str + 'T12:00:00.000Z')).optional(),
   notas: z.string().optional(),
 })
 

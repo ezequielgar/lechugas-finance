@@ -8,7 +8,7 @@ import { queryClient } from './lib/queryClient'
 import { useAuthStore } from './store/authStore'
 import { AuthRefresher } from './components/shared/AuthRefresher'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 function App() {
 

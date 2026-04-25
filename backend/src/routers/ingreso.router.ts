@@ -9,7 +9,7 @@ const createIngresoSchema = z.object({
   tipo: z.enum(['SUELDO', 'FREELANCE', 'ALQUILER', 'INVERSION', 'REGALO', 'BONO', 'OTRO']),
   monto: z.number().positive('El monto debe ser positivo'),
   moneda: z.string().default('ARS'),
-  fecha: z.string().transform((str) => new Date(str)),
+  fecha: z.string().transform((str) => new Date(str + 'T12:00:00.000Z')),
   recurrente: z.boolean().default(false),
   frecuencia: z.string().optional(),
   notas: z.string().optional(),

@@ -186,7 +186,7 @@ export function ProyectosPage() {
               >
                 {/* Header del proyecto */}
                 <div className="p-5">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     {/* Icono + info */}
                     <div className="flex items-start gap-4 min-w-0">
                       <div className={cn('mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center shrink-0', cfg.bg, cfg.border, 'border')}>

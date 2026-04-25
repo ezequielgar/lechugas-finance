@@ -20,7 +20,18 @@ const createCompraSchema = z.object({
   categoria: z.string().optional(),
   montoTotal: z.number().positive(),
   cuotas: z.number().int().min(1).default(1),
-  fechaCompra: z.string().transform((str) => new Date(str)),
+  fechaCompra: z.string().transform((str) => new Date(str + 'T12:00:00.000Z')),
+  notas: z.string().optional(),
+})
+
+const updateCompraSchema = z.object({
+  id: z.string(),
+  descripcion: z.string().min(1, 'La descripción es requerida').optional(),
+  comercio: z.string().optional(),
+  categoria: z.string().optional(),
+  montoTotal: z.number().positive().optional(),
+  cuotas: z.number().int().min(1).optional(),
+  fechaCompra: z.string().transform((str) => new Date(str + 'T12:00:00.000Z')).optional(),
   notas: z.string().optional(),
 })
 
@@ -130,11 +141,9 @@ export const tarjetaRouter = router({
 
   /** Agregar un consumo a una tarjeta */
   addCompra: protectedProcedure.input(createCompraSchema).mutation(async ({ ctx, input }) => {
-    console.log('Backend addCompra input:', input)
     const { tarjetaId, montoTotal, cuotas, ...rest } = input
 
     try {
-      // Verificar pertenencia
       const tarjeta = await ctx.prisma.tarjeta.findUnique({
         where: { id: tarjetaId, userId: ctx.user.id },
       })
@@ -165,4 +174,56 @@ export const tarjetaRouter = router({
       })
     }
   }),
+
+  /** Editar un consumo existente */
+  updateCompra: protectedProcedure.input(updateCompraSchema).mutation(async ({ ctx, input }) => {
+    const { id, montoTotal, cuotas, ...rest } = input
+
+    const compra = await ctx.prisma.comprarTarjeta.findUnique({
+      where: { id },
+      include: { tarjeta: true },
+    })
+
+    if (!compra || compra.tarjeta.userId !== ctx.user.id) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Consumo no encontrado o no autorizado.',
+      })
+    }
+
+    const nuevoMontoTotal = montoTotal ?? Number(compra.monto)
+    const nuevasCuotas = cuotas ?? compra.cuotas
+    const nuevaMontoCuota = nuevoMontoTotal / nuevasCuotas
+
+    return await ctx.prisma.comprarTarjeta.update({
+      where: { id },
+      data: {
+        ...rest,
+        monto: nuevoMontoTotal,
+        montoCuota: nuevaMontoCuota,
+        cuotas: nuevasCuotas,
+      },
+    })
+  }),
+
+  /** Eliminar un consumo */
+  deleteCompra: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const compra = await ctx.prisma.comprarTarjeta.findUnique({
+        where: { id: input.id },
+        include: { tarjeta: true },
+      })
+
+      if (!compra || compra.tarjeta.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Consumo no encontrado o no autorizado.',
+        })
+      }
+
+      await ctx.prisma.comprarTarjeta.delete({ where: { id: input.id } })
+      return { success: true }
+    }),
 })
+

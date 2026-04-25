@@ -4,7 +4,7 @@ import { X, Camera, Upload, Trash2, ImageOff, Loader2 } from 'lucide-react'
 import { trpc } from '../../../lib/trpc'
 import { useAuthStore } from '../../../store/authStore'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 // ── Canvas compression ────────────────────────────────────────────────────────
 function compressImage(file: File, maxPx = 1000, quality = 0.82): Promise<Blob> {

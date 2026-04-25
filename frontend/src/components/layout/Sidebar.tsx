@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import {
   LayoutDashboard,
   TrendingUp,
@@ -50,9 +49,10 @@ interface NavItemProps {
   icon: React.ElementType
   label: string
   active?: boolean
+  onNavigate?: () => void
 }
 
-function NavItem({ to, icon: Icon, label, active = true }: NavItemProps) {
+function NavItem({ to, icon: Icon, label, active = true, onNavigate }: NavItemProps) {
 
   if (!active) {
     return (
@@ -73,6 +73,7 @@ function NavItem({ to, icon: Icon, label, active = true }: NavItemProps) {
   return (
     <NavLink
       to={to}
+      onClick={onNavigate}
       className={({ isActive }) =>
         cn(
           'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
@@ -88,7 +89,7 @@ function NavItem({ to, icon: Icon, label, active = true }: NavItemProps) {
   )
 }
 
-export function Sidebar() {
+export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { user, clearAuth } = useAuthStore()
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => clearAuth(),
@@ -103,11 +104,15 @@ export function Sidebar() {
     : user?.username?.slice(0, 2).toUpperCase() ?? 'LF'
 
   return (
-    <motion.aside
-      initial={{ x: -20, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="w-64 flex flex-col bg-surface-900/60 border-r border-white/5 shrink-0"
+    <aside
+      className={cn(
+        'flex flex-col bg-surface-900 border-r border-white/5 shrink-0',
+        // Mobile: fixed overlay drawer
+        'fixed inset-y-0 left-0 z-40 w-64 transition-transform duration-300 ease-in-out',
+        isOpen ? 'translate-x-0' : '-translate-x-full',
+        // Desktop: always visible in flow
+        'md:relative md:translate-x-0 md:bg-surface-900/60',
+      )}
     >
       {/* Logo */}
       <div className="p-5 border-b border-white/5">
@@ -124,7 +129,7 @@ export function Sidebar() {
 
       {/* Navegación */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-        <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" active />
+        <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" active onNavigate={onClose} />
 
         <div className="pt-4 pb-1">
           <p className="px-3 text-[10px] font-bold tracking-widest text-slate-600 uppercase">
@@ -133,7 +138,7 @@ export function Sidebar() {
         </div>
 
         {navItems[1] && 'items' in navItems[1] && navItems[1].items.map((item) => (
-          <NavItem key={item.to} {...item} />
+          <NavItem key={item.to} {...item} onNavigate={onClose} />
         ))}
 
         {/* Admin section — solo si es ADMIN */}
@@ -146,6 +151,7 @@ export function Sidebar() {
             </div>
             <NavLink
               to="/admin"
+              onClick={onClose}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
@@ -193,6 +199,6 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-    </motion.aside>
+    </aside>
   )
 }

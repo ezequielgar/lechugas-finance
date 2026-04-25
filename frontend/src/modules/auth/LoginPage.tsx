@@ -96,7 +96,7 @@ export function LoginPage() {
         className="w-full max-w-md relative"
       >
         {/* Card principal */}
-        <div className="card p-8 shadow-2xl shadow-black/40">
+        <div className="card p-5 sm:p-8 shadow-2xl shadow-black/40">
           {/* Logo */}
           <div className="flex flex-col items-center gap-3 mb-8">
             <div className="w-14 h-14 rounded-2xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center glow-brand">

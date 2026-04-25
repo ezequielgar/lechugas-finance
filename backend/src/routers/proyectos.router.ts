@@ -10,8 +10,8 @@ const createProyectoSchema = z.object({
   presupuesto: z.number().positive('El presupuesto debe ser positivo').optional(),
   moneda: z.string().default('ARS'),
   estado: z.enum(['PLANIFICANDO', 'EN_PROGRESO', 'PAUSADO', 'COMPLETADO', 'CANCELADO']).default('PLANIFICANDO'),
-  fechaInicio: z.string().transform(s => new Date(s)).optional(),
-  fechaObjetivo: z.string().transform(s => new Date(s)).optional(),
+  fechaInicio: z.string().transform(s => new Date(s + 'T12:00:00.000Z')).optional(),
+  fechaObjetivo: z.string().transform(s => new Date(s + 'T12:00:00.000Z')).optional(),
 })
 
 const updateProyectoSchema = z.object({
@@ -20,8 +20,8 @@ const updateProyectoSchema = z.object({
   descripcion: z.string().optional(),
   presupuesto: z.number().positive().optional(),
   moneda: z.string().optional(),
-  fechaInicio: z.string().transform(s => new Date(s)).optional(),
-  fechaObjetivo: z.string().transform(s => new Date(s)).optional(),
+  fechaInicio: z.string().transform(s => new Date(s + 'T12:00:00.000Z')).optional(),
+  fechaObjetivo: z.string().transform(s => new Date(s + 'T12:00:00.000Z')).optional(),
 })
 
 const changeEstadoSchema = z.object({
@@ -34,7 +34,7 @@ const addGastoSchema = z.object({
   descripcion: z.string().min(1, 'La descripción es requerida'),
   monto: z.number().positive('El monto debe ser positivo'),
   moneda: z.string().default('ARS'),
-  fecha: z.string().transform(s => new Date(s)),
+  fecha: z.string().transform(s => new Date(s + 'T12:00:00.000Z')),
   categoria: z.string().optional(),
 })
 

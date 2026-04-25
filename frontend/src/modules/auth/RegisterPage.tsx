@@ -89,7 +89,7 @@ export function RegisterPage() {
           transition={{ duration: 0.4 }}
           className="w-full max-w-md relative"
         >
-          <div className="card p-8 shadow-2xl shadow-black/40 text-center space-y-5">
+          <div className="card p-5 sm:p-8 shadow-2xl shadow-black/40 text-center space-y-5">
             <div className="w-16 h-16 rounded-2xl bg-yellow-500/15 border border-yellow-500/30 flex items-center justify-center mx-auto">
               <Clock size={32} className="text-yellow-400" />
             </div>
@@ -119,7 +119,7 @@ export function RegisterPage() {
           transition={{ duration: 0.4 }}
           className="w-full max-w-md relative"
         >
-        <div className="card p-8 shadow-2xl shadow-black/40">
+        <div className="card p-5 sm:p-8 shadow-2xl shadow-black/40">
           {/* Logo */}
           <div className="flex flex-col items-center gap-3 mb-8">
             <div className="w-14 h-14 rounded-2xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center glow-brand">

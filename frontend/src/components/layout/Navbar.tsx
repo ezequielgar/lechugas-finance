@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, CheckCircle2, XCircle, Clock, UserPlus } from 'lucide-react'
+import { Bell, CheckCircle2, XCircle, Clock, UserPlus, Menu } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { trpc } from '../../lib/trpc'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-export function Navbar() {
+export function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.rol === 'ADMIN'
   const [open, setOpen] = useState(false)
@@ -38,10 +38,18 @@ export function Navbar() {
   }, [])
 
   return (
-    <header className="h-14 px-6 flex items-center justify-between border-b border-white/5 bg-surface-900/40 backdrop-blur-sm shrink-0">
-      <div>
-        <h1 className="text-sm font-medium text-slate-400">
-          Bienvenido de vuelta,{' '}
+    <header className="h-14 px-4 sm:px-6 flex items-center justify-between border-b border-white/5 bg-surface-900/40 backdrop-blur-sm shrink-0 gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        {/* Hamburger — only visible on mobile */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all shrink-0"
+          aria-label="Abrir menú"
+        >
+          <Menu size={20} />
+        </button>
+        <h1 className="text-sm font-medium text-slate-400 truncate">
+          Bienvenido,{' '}
           <span className="text-slate-200 font-semibold">
             {user?.displayName?.split(' ')[0] || user?.username}
           </span>{' '}

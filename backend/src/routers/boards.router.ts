@@ -42,7 +42,7 @@ const addMovimientoSchema = z.object({
   tipo: z.enum(['INGRESO', 'GASTO']),
   monto: z.number().positive('El monto debe ser positivo'),
   moneda: z.string().default('ARS'),
-  fecha: z.string().transform(s => new Date(s)),
+  fecha: z.string().transform(s => new Date(s + 'T12:00:00.000Z')),
   notas: z.string().optional(),
 })
 
@@ -52,7 +52,7 @@ const editMovimientoSchema = z.object({
   tipo: z.enum(['INGRESO', 'GASTO']).optional(),
   monto: z.number().positive().optional(),
   moneda: z.string().optional(),
-  fecha: z.string().transform(s => new Date(s)).optional(),
+  fecha: z.string().transform(s => new Date(s + 'T12:00:00.000Z')).optional(),
   notas: z.string().optional().nullable(),
 })
 

@@ -13,7 +13,7 @@ const schema = z.object({
   descripcion: z.string().min(1, 'La descripción es requerida'),
   comercio: z.string().optional(),
   categoria: z.string().optional(),
-  montoCuota: z.number().positive('El monto debe ser positivo'),
+  montoTotal: z.number().positive('El monto total debe ser positivo'),
   cuotas: z.number().int().min(1, 'Mínimo 1 cuota'),
   fechaCompra: z.string(),
   notas: z.string().optional(),
@@ -27,9 +27,12 @@ interface AddConsumoModalProps {
   onSuccess: () => void
   tarjetaId: string
   tarjetaNombre: string
+  initialData?: any // Para edición
 }
 
-export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjetaNombre }: AddConsumoModalProps) {
+export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjetaNombre, initialData }: AddConsumoModalProps) {
+  const isEditing = !!initialData
+
   const { register, handleSubmit, formState: { errors }, reset, control, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -45,9 +48,32 @@ export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjeta
     setValue('tarjetaId', tarjetaId)
   }, [tarjetaId, setValue])
 
+  // Cargar datos al editar
+  useEffect(() => {
+    if (initialData && isOpen) {
+      reset({
+        tarjetaId,
+        descripcion: initialData.descripcion,
+        comercio: initialData.comercio || '',
+        categoria: initialData.categoria || 'Varios',
+        montoTotal: Number(initialData.monto),
+        cuotas: initialData.cuotas,
+        fechaCompra: new Date(initialData.fechaCompra).toISOString().split('T')[0],
+        notas: initialData.notas || '',
+      })
+    } else if (!initialData && isOpen) {
+      reset({
+        tarjetaId,
+        cuotas: 1,
+        fechaCompra: new Date().toISOString().split('T')[0],
+        categoria: 'Varios',
+      })
+    }
+  }, [initialData, isOpen, reset, tarjetaId])
+
   const cuotas = useWatch({ control, name: 'cuotas' })
-  const montoCuota = useWatch({ control, name: 'montoCuota' })
-  const montoTotal = (cuotas || 0) * (montoCuota || 0)
+  const montoTotal = useWatch({ control, name: 'montoTotal' })
+  const montoCuota = (montoTotal || 0) / (cuotas || 1)
 
   const addMutation = trpc.tarjetas.addCompra.useMutation({
     onSuccess: () => {
@@ -61,18 +87,28 @@ export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjeta
     }
   })
 
-  const onSubmit = (data: FormData) => {
-    console.log('Submitting consumo:', data)
-    // Calculamos el monto total para el backend
-    const submissionData = {
-      ...data,
-      montoTotal: (data.montoCuota || 0) * (data.cuotas || 0),
+  const updateMutation = trpc.tarjetas.updateCompra.useMutation({
+    onSuccess: () => {
+      reset()
+      onSuccess()
+      onClose()
+    },
+    onError: (err) => {
+      console.error('Error updating consumo:', err.message)
+      alert('Error al editar consumo: ' + err.message)
     }
-    addMutation.mutate(submissionData as any)
+  })
+
+  const onSubmit = (data: FormData) => {
+    if (isEditing) {
+      updateMutation.mutate({ id: initialData.id, ...data })
+    } else {
+      addMutation.mutate(data)
+    }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Nuevo Consumo en ${tarjetaNombre}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? `Editar Consumo` : `Nuevo Consumo en ${tarjetaNombre}`}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
           label="Descripción"
@@ -109,22 +145,22 @@ export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjeta
             {...register('cuotas', { valueAsNumber: true })}
           />
           <Input
-            label="Monto de la Cuota"
+            label="Monto Total del Producto"
             type="number"
             step="0.01"
             icon={<DollarSign size={18} />}
-            error={errors.montoCuota?.message}
-            {...register('montoCuota', { valueAsNumber: true })}
+            error={errors.montoTotal?.message}
+            {...register('montoTotal', { valueAsNumber: true })}
           />
         </div>
 
-        {/* Resumen del total */}
-        {montoTotal > 0 && (
+        {/* Resumen */}
+        {(montoTotal || 0) > 0 && (
           <div className="p-4 rounded-xl bg-brand-500/10 border border-brand-500/20 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Total del producto</span>
+            <span className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Precio por cuota</span>
             <div className="flex items-end gap-1">
-              <span className="text-2xl font-bold text-slate-100">${montoTotal.toLocaleString()}</span>
-              <span className="text-xs text-slate-500 mb-1.5">({cuotas}x ${montoCuota.toLocaleString()})</span>
+              <span className="text-2xl font-bold text-slate-100">${montoCuota.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-xs text-slate-500 mb-1.5">x{cuotas} = ${(montoTotal || 0).toLocaleString()}</span>
             </div>
           </div>
         )}
@@ -133,8 +169,8 @@ export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjeta
           <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" variant="primary" className="flex-1" isLoading={addMutation.isPending}>
-            Cargar Consumo
+          <Button type="submit" variant="primary" className="flex-1" isLoading={addMutation.isPending || updateMutation.isPending}>
+            {isEditing ? 'Guardar Cambios' : 'Cargar Consumo'}
           </Button>
         </div>
       </form>

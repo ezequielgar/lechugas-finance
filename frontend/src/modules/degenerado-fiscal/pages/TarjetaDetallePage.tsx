@@ -1,11 +1,13 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { trpc } from '../../../lib/trpc'
-import { ArrowLeft, Landmark, CreditCard, Calendar, ShoppingBag, Trash2, FastForward, CheckCircle, RotateCcw, Check } from 'lucide-react'
+import { ArrowLeft, Landmark, CreditCard, Calendar, ShoppingBag, Trash2, FastForward, CheckCircle, RotateCcw, Check, Edit2, Plus } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { AddConsumoModal } from '../components/AddConsumoModal'
+import { useState } from 'react'
 
 const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#a855f7', '#6366f1', '#14b8a6']
 
@@ -13,6 +15,9 @@ export function TarjetaDetallePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const utils = trpc.useUtils()
+
+  const [isConsumoModalOpen, setIsConsumoModalOpen] = useState(false)
+  const [editingCompra, setEditingCompra] = useState<any>(null)
 
   const { data: tarjeta, isLoading } = trpc.tarjetas.getById.useQuery(
     { id: id || '' },
@@ -24,6 +29,23 @@ export function TarjetaDetallePage() {
       utils.tarjetas.getById.invalidate({ id: id || '' })
     }
   })
+
+  const deleteMutation = trpc.tarjetas.deleteCompra.useMutation({
+    onSuccess: () => {
+      utils.tarjetas.getById.invalidate({ id: id || '' })
+    }
+  })
+
+  const handleEdit = (compra: any) => {
+    setEditingCompra(compra)
+    setIsConsumoModalOpen(true)
+  }
+
+  const handleDelete = (compraId: string) => {
+    if (window.confirm('¿Eliminar este consumo? Esta acción no se puede deshacer.')) {
+      deleteMutation.mutate({ id: compraId })
+    }
+  }
 
   if (isLoading) {
     return (
@@ -113,8 +135,13 @@ export function TarjetaDetallePage() {
 
         {/* Action card rápido */}
         <div className="flex items-center gap-2 p-1 bg-surface-900/50 rounded-2xl border border-white/5 shadow-inner">
-           <Button variant="ghost" className="h-10 text-xs px-4 text-slate-400">Ver Resumen</Button>
-           <Button variant="outline" className="h-10 text-xs px-4 bg-brand-500/5 border-brand-500/10 text-brand-400 hover:bg-brand-500/10">Exportar PDF</Button>
+           <Button
+             variant="primary"
+             className="h-10 text-xs px-4"
+             onClick={() => { setEditingCompra(null); setIsConsumoModalOpen(true) }}
+           >
+             <Plus size={14} /> Nuevo Consumo
+           </Button>
         </div>
       </div>
 
@@ -202,36 +229,61 @@ export function TarjetaDetallePage() {
                             </div>
                           </td>
                           <td className="px-8 py-5">
-                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                               {!isSaldado ? (
-                                  <>
-                                    <button
-                                      onClick={() => handleUpdateCuotas(compra.id, 'ADELANTAR')}
-                                      disabled={updateMutation.isPending}
-                                      className="p-2 rounded-lg bg-brand-500/10 text-brand-400 hover:bg-brand-500 hover:text-white transition-all border border-brand-500/20"
-                                      title="Adelantar 1 cuota"
-                                    >
-                                      <FastForward size={14} />
-                                    </button>
-                                    <button
-                                      onClick={() => handleUpdateCuotas(compra.id, 'SALDAR')}
-                                      disabled={updateMutation.isPending}
-                                      className="p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white transition-all border border-green-500/20"
-                                      title="Saldar total del producto"
-                                    >
-                                      <CheckCircle size={14} />
-                                    </button>
-                                  </>
-                               ) : (
-                                  <button
-                                    onClick={() => handleUpdateCuotas(compra.id, 'RESETEAR')}
-                                    disabled={updateMutation.isPending}
-                                    className="p-2 rounded-lg bg-slate-800 text-slate-500 hover:text-slate-200 transition-all border border-white/5"
-                                    title="Resetear cuotas (0)"
-                                  >
-                                    <RotateCcw size={14} />
-                                  </button>
-                               )}
+                            <div className="flex items-center justify-center gap-1.5">
+                               {/* Editar — siempre visible */}
+                               <button
+                                 onClick={() => handleEdit(compra)}
+                                 className="p-2 rounded-lg bg-surface-800 text-slate-400 hover:text-white transition-all border border-white/5"
+                                 title="Editar consumo"
+                               >
+                                 <Edit2 size={14} />
+                               </button>
+
+                               {/* Eliminar — siempre visible */}
+                               <button
+                                 onClick={() => handleDelete(compra.id)}
+                                 disabled={deleteMutation.isPending}
+                                 className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                                 title="Eliminar consumo"
+                               >
+                                 <Trash2 size={14} />
+                               </button>
+
+                               {/* Separador */}
+                               <div className="w-px h-6 bg-white/10 mx-1" />
+
+                               {/* Acciones de cuotas — aparecen en hover */}
+                               <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 {!isSaldado ? (
+                                   <>
+                                     <button
+                                       onClick={() => handleUpdateCuotas(compra.id, 'ADELANTAR')}
+                                       disabled={updateMutation.isPending}
+                                       className="p-2 rounded-lg bg-brand-500/10 text-brand-400 hover:bg-brand-500 hover:text-white transition-all border border-brand-500/20"
+                                       title="Adelantar 1 cuota"
+                                     >
+                                       <FastForward size={14} />
+                                     </button>
+                                     <button
+                                       onClick={() => handleUpdateCuotas(compra.id, 'SALDAR')}
+                                       disabled={updateMutation.isPending}
+                                       className="p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white transition-all border border-green-500/20"
+                                       title="Saldar total del producto"
+                                     >
+                                       <CheckCircle size={14} />
+                                     </button>
+                                   </>
+                                 ) : (
+                                   <button
+                                     onClick={() => handleUpdateCuotas(compra.id, 'RESETEAR')}
+                                     disabled={updateMutation.isPending}
+                                     className="p-2 rounded-lg bg-slate-800 text-slate-500 hover:text-slate-200 transition-all border border-white/5"
+                                     title="Resetear cuotas (0)"
+                                   >
+                                     <RotateCcw size={14} />
+                                   </button>
+                                 )}
+                               </div>
                             </div>
                           </td>
                         </motion.tr>
@@ -345,6 +397,21 @@ export function TarjetaDetallePage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Modal de consumo (crear / editar) */}
+      {tarjeta && (
+        <AddConsumoModal
+          isOpen={isConsumoModalOpen}
+          onClose={() => {
+            setIsConsumoModalOpen(false)
+            setEditingCompra(null)
+          }}
+          onSuccess={() => utils.tarjetas.getById.invalidate({ id: id || '' })}
+          tarjetaId={id || ''}
+          tarjetaNombre={tarjeta.nombreTarjeta}
+          initialData={editingCompra}
+        />
+      )}
     </div>
   )
 }

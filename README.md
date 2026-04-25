@@ -113,6 +113,60 @@ npm run dev
 - Frontend: `http://localhost:5173`
 - Backend health: `http://localhost:3001/health`
 
+## Deploy en VPS (Hostinger + Docker)
+
+Este repo ya incluye archivos listos para produccion:
+
+- `docker-compose.prod.yml`
+- `.env.prod.example`
+- `backend/Dockerfile`
+- `frontend/Dockerfile`
+- `frontend/nginx.conf`
+
+### 1. Clonar en la VPS
+
+```bash
+git clone https://github.com/ezequielgar/lechugas-finance.git
+cd lechugas-finance
+```
+
+### 2. Crear archivo de entorno de produccion
+
+```bash
+cp .env.prod.example .env.prod
+```
+
+Editar `.env.prod` y completar secrets reales (`DB_ROOT_PASSWORD`, `DB_PASSWORD`, `JWT_SECRET`, `JWT_REFRESH_SECRET`) y tu dominio en `CORS_ORIGIN`.
+
+### 3. Levantar la app en produccion
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+```
+
+### 4. Ver logs y estado
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml ps
+docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f backend
+docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f frontend
+```
+
+### 5. Actualizar cuando subas cambios
+
+```bash
+git pull
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+```
+
+### 6. Notas importantes
+
+- El frontend se sirve en puerto `80` con Nginx.
+- Nginx hace proxy a `backend` para `/api` y `/uploads`.
+- Las imagenes de productos quedan persistidas en el volumen `backend_uploads`.
+- La base de datos MariaDB queda persistida en el volumen `db_data`.
+- El backend ejecuta `prisma migrate deploy` al iniciar.
+
 ## Variables de entorno
 
 ### Backend (`backend/.env`)

@@ -14,7 +14,7 @@ import { PriceCompareModal } from '../components/PriceCompareModal'
 import { ProductImageModal } from '../components/ProductImageModal'
 import { EditProductoModal } from '../components/EditProductoModal'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 export function ListaSuperDetallePage() {
   const { id } = useParams<{ id: string }>()
