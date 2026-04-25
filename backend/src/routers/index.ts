@@ -3,6 +3,7 @@ import { authRouter } from './auth.router.js'
 import { tarjetaRouter } from './tarjeta.router.js'
 import { ingresoRouter } from './ingreso.router.js'
 import { gastoFijoRouter } from './gastoFijo.router.js'
+import { gastoVariableRouter } from './gastoVariable.router.js'
 import { inversionesRouter } from './inversiones.router.js'
 import { creditosRouter } from './creditos.router.js'
 import { proyectosRouter } from './proyectos.router.js'
@@ -16,6 +17,7 @@ export const appRouter = router({
   tarjetas: tarjetaRouter,
   ingresos: ingresoRouter,
   gastosFijos: gastoFijoRouter,
+  gastosVariables: gastoVariableRouter,
   inversiones: inversionesRouter,
   creditos: creditosRouter,
   proyectos: proyectosRouter,
