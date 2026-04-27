@@ -76,15 +76,32 @@ export function TarjetaDetallePage() {
     )
   }
 
-  // Orden cronológico (más reciente primero)
+  // Orden cronológico (más viejo primero)
   const sortedCompras = [...tarjeta.compras].sort(
-    (a, b) => new Date(b.fechaCompra).getTime() - new Date(a.fechaCompra).getTime()
+    (a, b) => new Date(a.fechaCompra).getTime() - new Date(b.fechaCompra).getTime()
   )
 
-  // Próximo vencimiento: SOLO sumamos si NO está saldado (cuotasPagadas < cuotas)
+  // Convierte una cuota a ARS (usa tipoCambio si es USD)
+  const getCuotaARS = (compra: any) => {
+    const cuota = Number(compra.montoCuota)
+    if (compra.moneda === 'USD' && compra.tipoCambio) {
+      return cuota * Number(compra.tipoCambio)
+    }
+    return cuota
+  }
+
+  // Próximo pago: suma en ARS
   const nextPayment = tarjeta.compras.reduce((acc, compra) => {
+    if (compra.cuotasPagadas <= compra.cuotas) {
+      return acc + getCuotaARS(compra)
+    }
+    return acc
+  }, 0)
+
+  // Estimado Próximo Mes
+  const futurePayment = tarjeta.compras.reduce((acc, compra) => {
     if (compra.cuotasPagadas < compra.cuotas) {
-      return acc + Number(compra.montoCuota)
+      return acc + getCuotaARS(compra)
     }
     return acc
   }, 0)
@@ -179,7 +196,7 @@ export function TarjetaDetallePage() {
                 <tbody className="divide-y divide-white/5">
                   <AnimatePresence>
                     {sortedCompras.map((compra) => {
-                      const isSaldado = compra.cuotasPagadas === compra.cuotas
+                      const isSaldado = compra.cuotasPagadas > compra.cuotas
                       return (
                         <motion.tr
                           key={compra.id}
@@ -209,23 +226,32 @@ export function TarjetaDetallePage() {
                                <div className="flex-1 w-16 h-1 rounded-full bg-slate-800 overflow-hidden relative">
                                   <div 
                                     className={`h-full transition-all duration-700 ${isSaldado ? 'bg-brand-500' : 'bg-brand-400'}`} 
-                                    style={{ width: `${(compra.cuotasPagadas / (compra.cuotas || 1)) * 100}%` }}
+                                    style={{ width: `${(Math.min(compra.cuotasPagadas, compra.cuotas) / (compra.cuotas || 1)) * 100}%` }}
                                   />
                                </div>
                                <div className="flex items-center gap-1.5 min-w-[45px]">
                                   <span className={`text-[10px] font-black tracking-tighter px-2 py-0.5 rounded-md ${isSaldado ? 'bg-brand-500/10 text-brand-400' : 'bg-slate-800 text-slate-300'}`}>
-                                     {compra.cuotasPagadas} / {compra.cuotas}
+                                     {Math.min(compra.cuotasPagadas, compra.cuotas)} / {compra.cuotas}
                                   </span>
                                   {isSaldado && <Check size={12} className="text-brand-500" />}
                                </div>
                             </div>
                           </td>
                           <td className="px-8 py-5 text-right">
-                            <div className="flex flex-col items-end">
-                              <span className={`text-sm font-bold font-mono ${isSaldado ? 'text-slate-600' : 'text-slate-100'}`}>
-                                ${Number(compra.montoCuota).toLocaleString()}
+                            <div className="flex flex-col items-end gap-0.5">
+                              {/* Badge de moneda */}
+                              {compra.moneda === 'USD' && (
+                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">USD</span>
+                              )}
+                              <span className={`text-sm font-bold font-mono ${isSaldado ? 'text-slate-600' : compra.moneda === 'USD' ? 'text-emerald-300' : 'text-slate-100'}`}>
+                                {compra.moneda === 'USD' ? 'U$D' : '$'}{Number(compra.montoCuota).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
-                              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Total: ${Number(compra.monto).toLocaleString()}</span>
+                              {compra.moneda === 'USD' && compra.tipoCambio && (
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                  ≈ ${(Number(compra.montoCuota) * Number(compra.tipoCambio)).toLocaleString('es-AR', { maximumFractionDigits: 0 })} ARS
+                                </span>
+                              )}
+                              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Total: {compra.moneda === 'USD' ? 'U$D' : '$'}{Number(compra.monto).toLocaleString()}</span>
                             </div>
                           </td>
                           <td className="px-8 py-5">
@@ -331,6 +357,16 @@ export function TarjetaDetallePage() {
                  <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
                  Solo cuotas pendientes de este mes
               </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-brand-500/10 space-y-2">
+               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estimado Próximo Mes</h4>
+               <div className="flex items-end gap-2">
+                  <span className="text-2xl font-bold text-slate-300 tabular-nums">${futurePayment.toLocaleString()}</span>
+               </div>
+               <p className="text-[10px] text-slate-500 font-medium leading-tight">
+                 Resta los consumos que finalizan en el pago actual.
+               </p>
             </div>
           </motion.div>
 

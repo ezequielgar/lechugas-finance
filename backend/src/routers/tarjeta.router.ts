@@ -19,6 +19,8 @@ const createCompraSchema = z.object({
   comercio: z.string().optional(),
   categoria: z.string().optional(),
   montoTotal: z.number().positive(),
+  moneda: z.string().default('ARS'),
+  tipoCambio: z.number().positive().optional(),
   cuotas: z.number().int().min(1).default(1),
   fechaCompra: z.string().transform((str) => new Date(str + 'T12:00:00.000Z')),
   notas: z.string().optional(),
@@ -30,6 +32,8 @@ const updateCompraSchema = z.object({
   comercio: z.string().optional(),
   categoria: z.string().optional(),
   montoTotal: z.number().positive().optional(),
+  moneda: z.string().optional(),
+  tipoCambio: z.number().positive().optional().nullable(),
   cuotas: z.number().int().min(1).optional(),
   fechaCompra: z.string().transform((str) => new Date(str + 'T12:00:00.000Z')).optional(),
   notas: z.string().optional(),
@@ -126,9 +130,9 @@ export const tarjetaRouter = router({
       let nuevasCuotasPagadas = compra.cuotasPagadas
 
       if (input.accion === 'ADELANTAR') {
-        nuevasCuotasPagadas = Math.min(compra.cuotasPagadas + 1, compra.cuotas)
+        nuevasCuotasPagadas = Math.min(compra.cuotasPagadas + 1, compra.cuotas + 1)
       } else if (input.accion === 'SALDAR') {
-        nuevasCuotasPagadas = compra.cuotas
+        nuevasCuotasPagadas = compra.cuotas + 1
       } else if (input.accion === 'RESETEAR') {
         nuevasCuotasPagadas = 0
       }
@@ -141,7 +145,7 @@ export const tarjetaRouter = router({
 
   /** Agregar un consumo a una tarjeta */
   addCompra: protectedProcedure.input(createCompraSchema).mutation(async ({ ctx, input }) => {
-    const { tarjetaId, montoTotal, cuotas, ...rest } = input
+    const { tarjetaId, montoTotal, cuotas, moneda, tipoCambio, ...rest } = input
 
     try {
       const tarjeta = await ctx.prisma.tarjeta.findUnique({
@@ -163,6 +167,8 @@ export const tarjetaRouter = router({
           monto: montoTotal,
           montoCuota: montoCuota,
           cuotas,
+          moneda: moneda || 'ARS',
+          tipoCambio: tipoCambio ?? null,
           ...rest,
         },
       })
