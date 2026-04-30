@@ -5,7 +5,7 @@ import { Modal } from '../../../components/shared/Modal'
 import { Input } from '../../../components/ui/Input'
 import { Button } from '../../../components/ui/Button'
 import { trpc } from '../../../lib/trpc'
-import { ShoppingBag, Calendar, Hash, DollarSign, Tag, TrendingUp } from 'lucide-react'
+import { ShoppingBag, Calendar, Hash, DollarSign, Tag, TrendingUp, RefreshCw } from 'lucide-react'
 import { useEffect } from 'react'
 
 const schema = z.object({
@@ -17,6 +17,7 @@ const schema = z.object({
   moneda: z.enum(['ARS', 'USD']),
   tipoCambio: z.number().positive().optional(),
   cuotas: z.number().int().min(1, 'Mínimo 1 cuota'),
+  esRecurrente: z.boolean().default(false),
   fechaCompra: z.string(),
   notas: z.string().optional(),
 })
@@ -39,10 +40,14 @@ export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjeta
     resolver: zodResolver(schema),
     defaultValues: {
       tarjetaId,
-      cuotas: 1,
-      fechaCompra: new Date().toISOString().split('T')[0],
+      descripcion: '',
+      comercio: '',
       categoria: 'Varios',
       moneda: 'ARS',
+      cuotas: 1,
+      esRecurrente: false,
+      fechaCompra: new Date().toISOString().split('T')[0],
+      notas: '',
     }
   })
 
@@ -61,21 +66,29 @@ export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjeta
         moneda: (initialData.moneda as 'ARS' | 'USD') || 'ARS',
         tipoCambio: initialData.tipoCambio ? Number(initialData.tipoCambio) : undefined,
         cuotas: initialData.cuotas,
+        esRecurrente: initialData.esRecurrente || false,
         fechaCompra: new Date(initialData.fechaCompra).toISOString().split('T')[0],
         notas: initialData.notas || '',
       })
     } else if (!initialData && isOpen) {
       reset({
         tarjetaId,
-        cuotas: 1,
-        fechaCompra: new Date().toISOString().split('T')[0],
+        descripcion: '',
+        comercio: '',
         categoria: 'Varios',
+        montoTotal: undefined as any,
         moneda: 'ARS',
+        tipoCambio: undefined,
+        cuotas: 1,
+        esRecurrente: false,
+        fechaCompra: new Date().toISOString().split('T')[0],
+        notas: '',
       })
     }
   }, [initialData, isOpen, reset, tarjetaId])
 
   const cuotas = useWatch({ control, name: 'cuotas' })
+  const esRecurrente = useWatch({ control, name: 'esRecurrente' })
   const montoTotal = useWatch({ control, name: 'montoTotal' })
   const moneda = watch('moneda')
   const tipoCambio = watch('tipoCambio')
@@ -142,6 +155,26 @@ export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjeta
           />
         </div>
 
+        {/* Recurrente toggle */}
+        <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${esRecurrente ? 'bg-brand-500/10 border-brand-500/30' : 'bg-slate-800/30 border-slate-700/50 hover:bg-slate-800/50'}`}>
+          <div className={`p-2 rounded-lg ${esRecurrente ? 'bg-brand-500 text-slate-950' : 'bg-slate-700 text-slate-400'}`}>
+            <RefreshCw size={18} />
+          </div>
+          <div className="flex flex-col flex-1">
+            <span className={`text-sm font-semibold ${esRecurrente ? 'text-brand-400' : 'text-slate-200'}`}>Es recurrente (Suscripción)</span>
+            <span className="text-xs text-slate-500">Se cobrará todos los meses indefinidamente</span>
+          </div>
+          <input
+            type="checkbox"
+            className="w-5 h-5 rounded border-slate-600 bg-slate-900 text-brand-500 focus:ring-brand-500 focus:ring-offset-slate-900"
+            {...register('esRecurrente')}
+            onChange={(e) => {
+              register('esRecurrente').onChange(e)
+              if (e.target.checked) setValue('cuotas', 1)
+            }}
+          />
+        </label>
+
         {/* Moneda toggle */}
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Moneda</label>
@@ -165,17 +198,19 @@ export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjeta
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className={`grid ${esRecurrente ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
+          {!esRecurrente && (
+            <Input
+              label="Número de Cuotas"
+              type="number"
+              min={1}
+              icon={<Hash size={18} />}
+              error={errors.cuotas?.message}
+              {...register('cuotas', { valueAsNumber: true })}
+            />
+          )}
           <Input
-            label="Número de Cuotas"
-            type="number"
-            min={1}
-            icon={<Hash size={18} />}
-            error={errors.cuotas?.message}
-            {...register('cuotas', { valueAsNumber: true })}
-          />
-          <Input
-            label={`Monto Total ${moneda === 'USD' ? '(USD)' : '(ARS)'}`}
+            label={`Monto ${esRecurrente ? 'Mensual' : 'Total'} ${moneda === 'USD' ? '(USD)' : '(ARS)'}`}
             type="number"
             step="0.01"
             icon={<DollarSign size={18} />}
@@ -201,15 +236,17 @@ export function AddConsumoModal({ isOpen, onClose, onSuccess, tarjetaId, tarjeta
         {(montoTotal || 0) > 0 && (
           <div className={`p-4 rounded-xl border flex flex-col gap-1 ${moneda === 'USD' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-brand-500/10 border-brand-500/20'}`}>
             <span className={`text-xs font-semibold uppercase tracking-wider ${moneda === 'USD' ? 'text-emerald-400' : 'text-brand-400'}`}>
-              Precio por cuota
+              Precio por cuota {esRecurrente ? '(mensual)' : ''}
             </span>
             <div className="flex items-end gap-2 flex-wrap">
               <span className="text-2xl font-bold text-slate-100">
                 {moneda === 'USD' ? 'U$D' : '$'}{montoCuota.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <span className="text-xs text-slate-500 mb-1.5">
-                x{cuotas} = {moneda === 'USD' ? 'U$D' : '$'}{(montoTotal || 0).toLocaleString()}
-              </span>
+              {!esRecurrente && (
+                <span className="text-xs text-slate-500 mb-1.5">
+                  x{cuotas} = {moneda === 'USD' ? 'U$D' : '$'}{(montoTotal || 0).toLocaleString()}
+                </span>
+              )}
             </div>
             {moneda === 'USD' && tipoCambio && tipoCambio > 0 && (
               <p className="text-xs text-emerald-400/70 font-medium">

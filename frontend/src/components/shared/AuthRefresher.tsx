@@ -1,15 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAuthStore } from '../../store/authStore'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
+const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000 // 10 minutos
 
 /**
  * Componente que renueva el access token automáticamente:
  * - Al montar la app (en caso de que el token esté vencido)
  * - Cada 23 horas (antes de que el token de 24h expire)
+ *
+ * También cierra la sesión automáticamente tras 10 minutos de inactividad.
  */
 export function AuthRefresher() {
   const { setAccessToken, isAuthenticated, clearAuth } = useAuthStore()
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const doRefresh = async () => {
     // Solo intentamos refrescar si el usuario tiene sesión activa
@@ -55,6 +59,30 @@ export function AuthRefresher() {
     const interval = setInterval(doRefresh, intervalMs)
 
     return () => clearInterval(interval)
+  }, [isAuthenticated])
+
+  // --- Logout por inactividad ---
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const resetTimer = () => {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+      inactivityTimer.current = setTimeout(() => {
+        console.info('[Auth] Sesión cerrada por inactividad.')
+        clearAuth()
+      }, INACTIVITY_TIMEOUT_MS)
+    }
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click']
+    events.forEach((e) => window.addEventListener(e, resetTimer, { passive: true }))
+
+    // Arrancar el timer inicial
+    resetTimer()
+
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, resetTimer))
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+    }
   }, [isAuthenticated])
 
   return null // Componente invisible

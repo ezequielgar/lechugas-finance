@@ -11,6 +11,7 @@ const createTarjetaSchema = z.object({
   red: z.enum(['VISA', 'MASTERCARD', 'AMEX', 'CABAL', 'NARANJA', 'OTRA']),
   ultimos4: z.string().max(4).optional(),
   color: z.string().optional(),
+  proximoCierre: z.string().optional(),
 })
 
 const createCompraSchema = z.object({
@@ -23,6 +24,7 @@ const createCompraSchema = z.object({
   tipoCambio: z.number().positive().optional(),
   cuotas: z.number().int().min(1).default(1),
   fechaCompra: z.string().transform((str) => new Date(str + 'T12:00:00.000Z')),
+  esRecurrente: z.boolean().default(false).optional(),
   notas: z.string().optional(),
 })
 
@@ -36,6 +38,7 @@ const updateCompraSchema = z.object({
   tipoCambio: z.number().positive().optional().nullable(),
   cuotas: z.number().int().min(1).optional(),
   fechaCompra: z.string().transform((str) => new Date(str + 'T12:00:00.000Z')).optional(),
+  esRecurrente: z.boolean().optional(),
   notas: z.string().optional(),
 })
 
@@ -88,6 +91,39 @@ export const tarjetaRouter = router({
       },
     })
   }),
+
+  /** Actualizar una tarjeta (ej. Próximo Cierre, Cierre Manual) */
+  update: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      proximoCierre: z.string().optional(),
+      nombreTarjeta: z.string().optional(),
+      cierreManualMes: z.string().optional().nullable(),
+      cierreManualActual: z.number().optional().nullable(),
+      cierreManualProximo: z.number().optional().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const tarjeta = await ctx.prisma.tarjeta.findUnique({
+        where: { id: input.id, userId: ctx.user.id },
+      })
+      if (!tarjeta) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Tarjeta no encontrada' })
+      }
+
+      const data: Record<string, any> = {
+        proximoCierre: input.proximoCierre ? new Date(input.proximoCierre) : tarjeta.proximoCierre,
+        nombreTarjeta: input.nombreTarjeta || tarjeta.nombreTarjeta,
+      }
+
+      // Cierre manual: si se proveen los campos, actualizar (null los limpia)
+      if ('cierreManualMes' in input) {
+        data.cierreManualMes = input.cierreManualMes ? new Date(input.cierreManualMes) : null
+        data.cierreManualActual = input.cierreManualActual ?? null
+        data.cierreManualProximo = input.cierreManualProximo ?? null
+      }
+
+      return ctx.prisma.tarjeta.update({ where: { id: input.id }, data })
+    }),
 
   /** Eliminar una tarjeta */
   delete: protectedProcedure

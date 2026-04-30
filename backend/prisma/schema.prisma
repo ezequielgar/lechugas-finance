@@ -59,8 +59,12 @@ model Tarjeta {
   red           RedTarjeta
   ultimos4      String?
   color         String?
-  modoSimple    Boolean     @default(false)
-  activa        Boolean     @default(true)
+  proximoCierre       DateTime?
+  cierreManualMes     DateTime?
+  cierreManualActual  Decimal?
+  cierreManualProximo Decimal?
+  modoSimple          Boolean     @default(false)
+  activa              Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -101,6 +105,7 @@ model ComprarTarjeta {
   fechaCompra       DateTime
   fechaPrimeraCuota DateTime?
   cuotasPagadas     Int      @default(0)
+  esRecurrente      Boolean  @default(false)
   notas             String?  @db.Text
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
