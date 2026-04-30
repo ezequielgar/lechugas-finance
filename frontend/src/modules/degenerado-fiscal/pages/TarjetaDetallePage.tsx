@@ -154,16 +154,10 @@ export function TarjetaDetallePage() {
     return acc + getCuotaARS(compra)
   }, 0)
 
-  // Cierre manual: verificar si los datos guardados corresponden al mes seleccionado
-  const cierreManualMesDate = tarjeta.cierreManualMes
-    ? parseSafeDate(tarjeta.cierreManualMes as string)
-    : null
-  const manualMatchesCurrent =
-    cierreManualMesDate !== null &&
-    cierreManualMesDate.getFullYear() === selectedMonth.getFullYear() &&
-    cierreManualMesDate.getMonth() === selectedMonth.getMonth()
-  const hasManualData = manualMatchesCurrent &&
-    (tarjeta.cierreManualActual !== null || tarjeta.cierreManualProximo !== null)
+  // Cierre manual: buscar el registro del mes seleccionado en el historial
+  const mesKey = format(selectedMonth, 'yyyy-MM')
+  const cierreDelMes = (tarjeta.cierres || []).find((c: any) => c.mes === mesKey) || null
+  const hasManualData = !!cierreDelMes
 
   // Estimado Mes Siguiente (al seleccionado)
   const futurePayment = sortedCompras.filter(compra => {
@@ -477,12 +471,12 @@ export function TarjetaDetallePage() {
             <div className="space-y-2">
               <div className="flex items-start gap-3">
                 <span className="text-4xl font-black text-white tracking-tighter tabular-nums">
-                  ${(hasManualData && tarjeta.cierreManualActual !== null
-                    ? Number(tarjeta.cierreManualActual)
+                  ${(hasManualData && cierreDelMes.montoActual !== null
+                    ? Number(cierreDelMes.montoActual)
                     : nextPayment
                   ).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
-                {hasManualData && tarjeta.cierreManualActual !== null && (
+                {hasManualData && cierreDelMes.montoActual !== null && (
                   <span className="mt-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md bg-brand-500/20 text-brand-300 border border-brand-500/30">
                     REAL
                   </span>
@@ -496,23 +490,23 @@ export function TarjetaDetallePage() {
 
             <div className="mt-6 pt-6 border-t border-brand-500/10 space-y-2">
                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                 {hasManualData && tarjeta.cierreManualProximo !== null ? 'Cierre Próximo Mes' : 'Estimado Mes Siguiente'}{' '}({format(addMonths(selectedMonth, 1), 'MMM', { locale: es })})
+                 {hasManualData && cierreDelMes?.montoProximo !== null ? 'Cierre Próximo Mes' : 'Estimado Mes Siguiente'}{' '}({format(addMonths(selectedMonth, 1), 'MMM', { locale: es })})
                </h4>
                <div className="flex items-end gap-2">
                   <span className="text-2xl font-bold text-slate-300 tabular-nums">
-                    ${(hasManualData && tarjeta.cierreManualProximo !== null
-                      ? Number(tarjeta.cierreManualProximo)
+                    ${(hasManualData && cierreDelMes.montoProximo !== null
+                      ? Number(cierreDelMes.montoProximo)
                       : futurePayment
                     ).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </span>
-                  {hasManualData && tarjeta.cierreManualProximo !== null && (
+                  {hasManualData && cierreDelMes.montoProximo !== null && (
                     <span className="mb-1 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md bg-slate-700/50 text-slate-400 border border-white/10">
                       REAL
                     </span>
                   )}
                </div>
                <p className="text-[10px] text-slate-500 font-medium leading-tight">
-                 {hasManualData && tarjeta.cierreManualProximo !== null
+                 {hasManualData && cierreDelMes.montoProximo !== null
                    ? 'Monto informado por la tarjeta.'
                    : 'Cuotas y suscripciones del próximo mes.'}
                </p>
@@ -615,9 +609,10 @@ export function TarjetaDetallePage() {
           onClose={() => setIsEditCierreOpen(false)}
           tarjetaId={tarjeta.id}
           mesActual={selectedMonth}
-          cierreManualActual={tarjeta.cierreManualActual !== undefined && tarjeta.cierreManualActual !== null ? Number(tarjeta.cierreManualActual) : null}
-          cierreManualProximo={tarjeta.cierreManualProximo !== undefined && tarjeta.cierreManualProximo !== null ? Number(tarjeta.cierreManualProximo) : null}
-          cierreManualMes={cierreManualMesDate}
+          cierreExistente={cierreDelMes ? {
+            montoActual: Number(cierreDelMes.montoActual),
+            montoProximo: cierreDelMes.montoProximo !== null ? Number(cierreDelMes.montoProximo) : null,
+          } : null}
         />
       )}
     </div>

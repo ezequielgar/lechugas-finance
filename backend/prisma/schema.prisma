@@ -59,12 +59,9 @@ model Tarjeta {
   red           RedTarjeta
   ultimos4      String?
   color         String?
-  proximoCierre       DateTime?
-  cierreManualMes     DateTime?
-  cierreManualActual  Decimal?
-  cierreManualProximo Decimal?
-  modoSimple          Boolean     @default(false)
-  activa              Boolean     @default(true)
+  proximoCierre DateTime?
+  modoSimple    Boolean     @default(false)
+  activa        Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -72,8 +69,24 @@ model Tarjeta {
   compras       ComprarTarjeta[]
   pagos         PagoTarjeta[]
   gastosTarjeta GastoTarjeta[]
+  cierres       CierreTarjeta[]
 
   @@index([userId])
+}
+
+model CierreTarjeta {
+  id           String   @id @default(cuid())
+  tarjetaId    String
+  mes          String   // formato "2026-04"
+  montoActual  Decimal  @db.Decimal(20, 4)
+  montoProximo Decimal? @db.Decimal(20, 4)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tarjeta Tarjeta @relation(fields: [tarjetaId], references: [id], onDelete: Cascade)
+
+  @@unique([tarjetaId, mes])
+  @@index([tarjetaId])
 }
 
 enum TipoTarjeta {

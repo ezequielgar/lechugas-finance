@@ -58,7 +58,7 @@ export const tarjetaRouter = router({
     })
   }),
 
-  /** Obtener una tarjeta específica con sus consumos */
+  /** Obtener una tarjeta específica con sus consumos y cierres */
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -67,6 +67,9 @@ export const tarjetaRouter = router({
         include: {
           compras: {
             orderBy: { fechaCompra: 'desc' },
+          },
+          cierres: {
+            orderBy: { mes: 'desc' },
           },
         },
       })
@@ -92,15 +95,12 @@ export const tarjetaRouter = router({
     })
   }),
 
-  /** Actualizar una tarjeta (ej. Próximo Cierre, Cierre Manual) */
+  /** Actualizar una tarjeta (nombre, próximo cierre) */
   update: protectedProcedure
     .input(z.object({
       id: z.string(),
       proximoCierre: z.string().optional(),
       nombreTarjeta: z.string().optional(),
-      cierreManualMes: z.string().optional().nullable(),
-      cierreManualActual: z.number().optional().nullable(),
-      cierreManualProximo: z.number().optional().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
       const tarjeta = await ctx.prisma.tarjeta.findUnique({
@@ -109,20 +109,59 @@ export const tarjetaRouter = router({
       if (!tarjeta) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Tarjeta no encontrada' })
       }
+      return ctx.prisma.tarjeta.update({
+        where: { id: input.id },
+        data: {
+          proximoCierre: input.proximoCierre ? new Date(input.proximoCierre) : undefined,
+          nombreTarjeta: input.nombreTarjeta || undefined,
+        },
+      })
+    }),
 
-      const data: Record<string, any> = {
-        proximoCierre: input.proximoCierre ? new Date(input.proximoCierre) : tarjeta.proximoCierre,
-        nombreTarjeta: input.nombreTarjeta || tarjeta.nombreTarjeta,
+  /** Guardar o actualizar el cierre real de un mes específico */
+  setCierre: protectedProcedure
+    .input(z.object({
+      tarjetaId: z.string(),
+      mes: z.string().regex(/^\d{4}-\d{2}$/, 'Formato YYYY-MM requerido'),
+      montoActual: z.number().positive(),
+      montoProximo: z.number().nonnegative().optional().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const tarjeta = await ctx.prisma.tarjeta.findUnique({
+        where: { id: input.tarjetaId, userId: ctx.user.id },
+      })
+      if (!tarjeta) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Tarjeta no encontrada' })
       }
+      return ctx.prisma.cierreTarjeta.upsert({
+        where: { tarjetaId_mes: { tarjetaId: input.tarjetaId, mes: input.mes } },
+        create: {
+          tarjetaId: input.tarjetaId,
+          mes: input.mes,
+          montoActual: input.montoActual,
+          montoProximo: input.montoProximo ?? null,
+        },
+        update: {
+          montoActual: input.montoActual,
+          montoProximo: input.montoProximo ?? null,
+        },
+      })
+    }),
 
-      // Cierre manual: si se proveen los campos, actualizar (null los limpia)
-      if ('cierreManualMes' in input) {
-        data.cierreManualMes = input.cierreManualMes ? new Date(input.cierreManualMes) : null
-        data.cierreManualActual = input.cierreManualActual ?? null
-        data.cierreManualProximo = input.cierreManualProximo ?? null
+  /** Eliminar el cierre manual de un mes */
+  deleteCierre: protectedProcedure
+    .input(z.object({ tarjetaId: z.string(), mes: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const tarjeta = await ctx.prisma.tarjeta.findUnique({
+        where: { id: input.tarjetaId, userId: ctx.user.id },
+      })
+      if (!tarjeta) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Tarjeta no encontrada' })
       }
-
-      return ctx.prisma.tarjeta.update({ where: { id: input.id }, data })
+      await ctx.prisma.cierreTarjeta.deleteMany({
+        where: { tarjetaId: input.tarjetaId, mes: input.mes },
+      })
+      return { success: true }
     }),
 
   /** Eliminar una tarjeta */
