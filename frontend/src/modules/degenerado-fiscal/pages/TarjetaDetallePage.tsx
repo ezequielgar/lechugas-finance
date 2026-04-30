@@ -89,6 +89,12 @@ export function TarjetaDetallePage() {
     }
   })
 
+  const setCierreMutation = trpc.tarjetas.setCierre.useMutation({
+    onSuccess: () => {
+      utils.tarjetas.getById.invalidate({ id: id || '' })
+    }
+  })
+
   const handleEdit = (compra: any) => {
     setEditingCompra(compra)
     setIsConsumoModalOpen(true)
@@ -225,7 +231,13 @@ export function TarjetaDetallePage() {
               <span 
                 className="font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 cursor-pointer hover:text-white transition-colors"
                 onClick={() => {
-                  const currentStr = proximoCierreStr ? proximoCierreStr.split('T')[0] : new Date().toISOString().split('T')[0]
+                  let currentStr = new Date().toISOString().split('T')[0]
+                  if (tarjeta.proximoCierre) {
+                    currentStr = typeof tarjeta.proximoCierre === 'string' 
+                      ? tarjeta.proximoCierre.split('T')[0] 
+                      : tarjeta.proximoCierre.toISOString().split('T')[0]
+                  }
+                  
                   const val = prompt('Fecha exacta del próximo cierre (Formato YYYY-MM-DD):', currentStr)
                   if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
                      updateTarjetaMutation.mutate({ id: tarjeta.id, proximoCierre: val })
@@ -233,9 +245,41 @@ export function TarjetaDetallePage() {
                      alert('Formato inválido. Debe ser YYYY-MM-DD (ej: 2026-04-24)')
                   }
                 }}
-                title="Cambiar fecha de próximo cierre"
+                title="Cambiar fecha de próximo cierre (Global)"
               >
-                 {proximoCierreStr ? `Próximo Cierre: ${format(parseSafeDate(proximoCierreStr), 'dd MMM yyyy', { locale: es })}` : 'Configurar Cierre'} <Edit2 size={10} />
+                 {proximoCierreStr ? `Próximo Cierre: ${format(parseSafeDate(proximoCierreStr), 'dd MMM yyyy', { locale: es })}` : 'Configurar Próximo Cierre'} <Edit2 size={10} />
+              </span>
+
+              <span className="w-1 h-1 rounded-full bg-slate-700 mx-1" />
+              
+              <span 
+                className="font-bold text-brand-400 uppercase tracking-widest flex items-center gap-1 cursor-pointer hover:text-white transition-colors"
+                onClick={() => {
+                  let currentStr = new Date().toISOString().split('T')[0]
+                  if (cierreDelMes?.fechaCierre) {
+                    currentStr = typeof cierreDelMes.fechaCierre === 'string' 
+                      ? cierreDelMes.fechaCierre.split('T')[0] 
+                      : new Date(cierreDelMes.fechaCierre).toISOString().split('T')[0]
+                  }
+                  
+                  const val = prompt(`Fecha de cierre para ${format(selectedMonth, 'MMMM yyyy', { locale: es }).toUpperCase()} (Formato YYYY-MM-DD):`, currentStr)
+                  if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                     setCierreMutation.mutate({ 
+                       tarjetaId: tarjeta.id, 
+                       mes: mesKey, 
+                       fechaCierre: val,
+                       montoActual: cierreDelMes?.montoActual ? Number(cierreDelMes.montoActual) : undefined,
+                       montoProximo: cierreDelMes?.montoProximo ? Number(cierreDelMes.montoProximo) : undefined
+                     })
+                  } else if (val !== null) {
+                     alert('Formato inválido. Debe ser YYYY-MM-DD (ej: 2026-04-24)')
+                  }
+                }}
+                title={`Cambiar fecha de cierre para ${format(selectedMonth, 'MMM', { locale: es })}`}
+              >
+                 {cierreDelMes?.fechaCierre 
+                   ? `Cierre ${format(selectedMonth, 'MMM', { locale: es })}: ${format(parseSafeDate(cierreDelMes.fechaCierre), 'dd MMM yyyy', { locale: es })}` 
+                   : `Configurar Cierre ${format(selectedMonth, 'MMM', { locale: es })}`} <Edit2 size={10} />
               </span>
             </div>
           </div>

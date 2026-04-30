@@ -123,8 +123,9 @@ export const tarjetaRouter = router({
     .input(z.object({
       tarjetaId: z.string(),
       mes: z.string().regex(/^\d{4}-\d{2}$/, 'Formato YYYY-MM requerido'),
-      montoActual: z.number().positive(),
+      montoActual: z.number().nonnegative().optional().nullable(),
       montoProximo: z.number().nonnegative().optional().nullable(),
+      fechaCierre: z.string().optional().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
       const tarjeta = await ctx.prisma.tarjeta.findUnique({
@@ -133,17 +134,22 @@ export const tarjetaRouter = router({
       if (!tarjeta) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Tarjeta no encontrada' })
       }
+      
+      const parsedFechaCierre = input.fechaCierre ? new Date(input.fechaCierre + 'T12:00:00.000Z') : null;
+
       return ctx.prisma.cierreTarjeta.upsert({
         where: { tarjetaId_mes: { tarjetaId: input.tarjetaId, mes: input.mes } },
         create: {
           tarjetaId: input.tarjetaId,
           mes: input.mes,
-          montoActual: input.montoActual,
+          montoActual: input.montoActual ?? null,
           montoProximo: input.montoProximo ?? null,
+          fechaCierre: parsedFechaCierre,
         },
         update: {
-          montoActual: input.montoActual,
-          montoProximo: input.montoProximo ?? null,
+          montoActual: input.montoActual !== undefined ? input.montoActual : undefined,
+          montoProximo: input.montoProximo !== undefined ? input.montoProximo : undefined,
+          fechaCierre: input.fechaCierre !== undefined ? parsedFechaCierre : undefined,
         },
       })
     }),

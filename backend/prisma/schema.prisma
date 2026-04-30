@@ -78,8 +78,9 @@ model CierreTarjeta {
   id           String   @id @default(cuid())
   tarjetaId    String
   mes          String   // formato "2026-04"
-  montoActual  Decimal  @db.Decimal(20, 4)
+  montoActual  Decimal? @db.Decimal(20, 4)
   montoProximo Decimal? @db.Decimal(20, 4)
+  fechaCierre  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
