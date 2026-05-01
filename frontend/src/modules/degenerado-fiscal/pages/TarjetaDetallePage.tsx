@@ -8,9 +8,10 @@ import { es } from 'date-fns/locale'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, Cell } from 'recharts'
 import { AddConsumoModal } from '../components/AddConsumoModal'
 import { EditCierreManualModal } from '../components/EditCierreManualModal'
+import { EditFechasCierreModal } from '../components/EditFechasCierreModal'
 import { useState } from 'react'
 
-const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#a855f7', '#6366f1', '#14b8a6']
+
 
 // Helper: Parsea fecha segura (evita shift de timezone al leer UTC)
 const parseSafeDate = (dateStr: string | Date) => {
@@ -29,31 +30,23 @@ const getCuotaARS = (compra: any) => {
 }
 
 // Helper: Obtiene en qué mes entra el consumo (en qué Resumen se factura)
-const getMesPrimeraCuota = (compra: any, proximoCierreStr: string | null) => {
+const getMesPrimeraCuota = (
+  compra: any,
+  cierreActualStr: string | null,
+  proximoCierreStr: string | null
+) => {
   const compraDate = parseSafeDate(compra.fechaCompra)
-  const compraDay = compraDate.getDate()
-  const compraMonth = compraDate.getMonth()
-  const compraYear = compraDate.getFullYear()
   
-  let cierreDay = 25
-  if (proximoCierreStr) {
-     const cierreDate = parseSafeDate(proximoCierreStr)
-     cierreDay = cierreDate.getDate()
-     
-     if (compraYear === cierreDate.getFullYear() && compraMonth === cierreDate.getMonth()) {
-        if (compraDate.getTime() > cierreDate.getTime()) {
-           return addMonths(startOfMonth(compraDate), 1)
-        } else {
-           return startOfMonth(compraDate)
-        }
-     }
+  const cAct = cierreActualStr ? parseSafeDate(cierreActualStr) : null
+  const pc = proximoCierreStr ? parseSafeDate(proximoCierreStr) : null
+
+  if (cAct && compraDate.getTime() > cAct.getTime()) {
+    if (pc && compraDate.getTime() <= pc.getTime()) {
+      return startOfMonth(pc)
+    }
+    return addMonths(startOfMonth(cAct), 1)
   }
-  
-  if (compraDay > cierreDay) {
-    return addMonths(startOfMonth(compraDate), 1)
-  } else {
-    return startOfMonth(compraDate)
-  }
+  return startOfMonth(cAct || compraDate)
 }
 
 export function TarjetaDetallePage() {
@@ -62,6 +55,7 @@ export function TarjetaDetallePage() {
   const utils = trpc.useUtils()
 
   const [isConsumoModalOpen, setIsConsumoModalOpen] = useState(false)
+  const [isCierresModalOpen, setIsCierresModalOpen] = useState(false)
   const [editingCompra, setEditingCompra] = useState<any>(null)
   const [selectedMonth, setSelectedMonth] = useState(new Date())
   const [isEditCierreOpen, setIsEditCierreOpen] = useState(false)
@@ -83,17 +77,6 @@ export function TarjetaDetallePage() {
     }
   })
 
-  const updateTarjetaMutation = trpc.tarjetas.update.useMutation({
-    onSuccess: () => {
-      utils.tarjetas.getById.invalidate({ id: id || '' })
-    }
-  })
-
-  const setCierreMutation = trpc.tarjetas.setCierre.useMutation({
-    onSuccess: () => {
-      utils.tarjetas.getById.invalidate({ id: id || '' })
-    }
-  })
 
   const handleEdit = (compra: any) => {
     setEditingCompra(compra)
@@ -140,11 +123,12 @@ export function TarjetaDetallePage() {
     (a, b) => parseSafeDate(a.fechaCompra).getTime() - parseSafeDate(b.fechaCompra).getTime()
   )
 
+  const cierreActualStr = tarjeta.cierreActual as string | null
   const proximoCierreStr = tarjeta.proximoCierre as string | null
 
   // Obtener solo consumos activos para el mes seleccionado
   const activeCompras = sortedCompras.filter(compra => {
-    const start = getMesPrimeraCuota(compra, proximoCierreStr)
+    const start = getMesPrimeraCuota(compra, cierreActualStr, proximoCierreStr)
     const target = startOfMonth(selectedMonth)
     
     if (start > target) return false // Aún no se compró o entra el próximo mes
@@ -160,20 +144,20 @@ export function TarjetaDetallePage() {
     return acc + getCuotaARS(compra)
   }, 0)
 
-  // Cierre manual: buscar el registro del mes seleccionado en el historial
-  const mesKey = format(selectedMonth, 'yyyy-MM')
-  const cierreDelMes = (tarjeta.cierres || []).find((c: any) => c.mes === mesKey) || null
-  const hasManualData = !!cierreDelMes
-
   // Estimado Mes Siguiente (al seleccionado)
   const futurePayment = sortedCompras.filter(compra => {
-    const start = getMesPrimeraCuota(compra, proximoCierreStr)
+    const start = getMesPrimeraCuota(compra, cierreActualStr, proximoCierreStr)
     const target = startOfMonth(addMonths(selectedMonth, 1))
     if (start > target) return false
     if (compra.esRecurrente) return true
     const diff = differenceInCalendarMonths(target, start)
     return diff >= 0 && diff < compra.cuotas
   }).reduce((acc, compra) => acc + getCuotaARS(compra), 0)
+
+  // Cierre manual: buscar el registro del mes seleccionado en el historial
+  const mesKey = format(selectedMonth, 'yyyy-MM')
+  const cierreDelMes = (tarjeta.cierres || []).find((c: any) => c.mes === mesKey) || null
+  const hasManualData = !!cierreDelMes
 
   // Gráfico de Volumen de Compras (últimos 6 meses hasta el actual)
   const last6Months = Array.from({ length: 6 }).map((_, i) => subMonths(new Date(), 5 - i))
@@ -228,59 +212,33 @@ export function TarjetaDetallePage() {
                 </>
               )}
               <span className="w-1 h-1 rounded-full bg-slate-700" />
-              <span 
-                className="font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 cursor-pointer hover:text-white transition-colors"
-                onClick={() => {
-                  let currentStr = new Date().toISOString().split('T')[0]
-                  if (tarjeta.proximoCierre) {
-                    currentStr = typeof tarjeta.proximoCierre === 'string' 
-                      ? tarjeta.proximoCierre.split('T')[0] 
-                      : tarjeta.proximoCierre.toISOString().split('T')[0]
-                  }
-                  
-                  const val = prompt('Fecha exacta del próximo cierre (Formato YYYY-MM-DD):', currentStr)
-                  if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
-                     updateTarjetaMutation.mutate({ id: tarjeta.id, proximoCierre: val })
-                  } else if (val !== null) {
-                     alert('Formato inválido. Debe ser YYYY-MM-DD (ej: 2026-04-24)')
-                  }
-                }}
-                title="Cambiar fecha de próximo cierre (Global)"
-              >
-                 {proximoCierreStr ? `Próximo Cierre: ${format(parseSafeDate(proximoCierreStr), 'dd MMM yyyy', { locale: es })}` : 'Configurar Próximo Cierre'} <Edit2 size={10} />
-              </span>
-
-              <span className="w-1 h-1 rounded-full bg-slate-700 mx-1" />
               
-              <span 
-                className="font-bold text-brand-400 uppercase tracking-widest flex items-center gap-1 cursor-pointer hover:text-white transition-colors"
-                onClick={() => {
-                  let currentStr = new Date().toISOString().split('T')[0]
-                  if (cierreDelMes?.fechaCierre) {
-                    currentStr = typeof cierreDelMes.fechaCierre === 'string' 
-                      ? cierreDelMes.fechaCierre.split('T')[0] 
-                      : new Date(cierreDelMes.fechaCierre).toISOString().split('T')[0]
-                  }
-                  
-                  const val = prompt(`Fecha de cierre para ${format(selectedMonth, 'MMMM yyyy', { locale: es }).toUpperCase()} (Formato YYYY-MM-DD):`, currentStr)
-                  if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
-                     setCierreMutation.mutate({ 
-                       tarjetaId: tarjeta.id, 
-                       mes: mesKey, 
-                       fechaCierre: val,
-                       montoActual: cierreDelMes?.montoActual ? Number(cierreDelMes.montoActual) : undefined,
-                       montoProximo: cierreDelMes?.montoProximo ? Number(cierreDelMes.montoProximo) : undefined
-                     })
-                  } else if (val !== null) {
-                     alert('Formato inválido. Debe ser YYYY-MM-DD (ej: 2026-04-24)')
-                  }
-                }}
-                title={`Cambiar fecha de cierre para ${format(selectedMonth, 'MMM', { locale: es })}`}
+              <div 
+                className="flex items-center gap-3 bg-surface-900 border border-white/5 py-1 px-3 rounded-lg cursor-pointer hover:bg-white/5 transition-colors"
+                onClick={() => setIsCierresModalOpen(true)}
+                title="Configurar fechas de cierre"
               >
-                 {cierreDelMes?.fechaCierre 
-                   ? `Cierre ${format(selectedMonth, 'MMM', { locale: es })}: ${format(parseSafeDate(cierreDelMes.fechaCierre), 'dd MMM yyyy', { locale: es })}` 
-                   : `Configurar Cierre ${format(selectedMonth, 'MMM', { locale: es })}`} <Edit2 size={10} />
-              </span>
+                 <span className="text-[10px] uppercase font-bold text-slate-500">Cierres:</span>
+                 {tarjeta.cierreAnterior && (
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                      Ant: <span className="text-white">{format(parseSafeDate(tarjeta.cierreAnterior), 'dd MMM', { locale: es })}</span>
+                   </span>
+                 )}
+                 {tarjeta.cierreActual && (
+                   <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest flex items-center gap-1">
+                      Act: <span className="text-white">{format(parseSafeDate(tarjeta.cierreActual), 'dd MMM', { locale: es })}</span>
+                   </span>
+                 )}
+                 {tarjeta.proximoCierre && (
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                      Próx: <span className="text-white">{format(parseSafeDate(tarjeta.proximoCierre), 'dd MMM', { locale: es })}</span>
+                   </span>
+                 )}
+                 {(!tarjeta.cierreAnterior && !tarjeta.cierreActual && !tarjeta.proximoCierre) && (
+                   <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest">Configurar Fechas</span>
+                 )}
+                 <Edit2 size={10} className="text-slate-500 ml-1" />
+              </div>
             </div>
           </div>
         </div>
@@ -335,7 +293,7 @@ export function TarjetaDetallePage() {
                   <AnimatePresence mode="wait">
                     {activeCompras.map((compra) => {
                       const isSaldado = !compra.esRecurrente && compra.cuotasPagadas >= compra.cuotas
-                      const currentCuota = compra.esRecurrente ? 1 : differenceInCalendarMonths(selectedMonth, getMesPrimeraCuota(compra, proximoCierreStr)) + 1
+                      const currentCuota = compra.esRecurrente ? 1 : differenceInCalendarMonths(selectedMonth, getMesPrimeraCuota(compra, cierreActualStr, proximoCierreStr)) + 1
                       return (
                         <motion.tr
                           key={compra.id}
@@ -594,7 +552,7 @@ export function TarjetaDetallePage() {
                       contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', padding: '12px' }}
                       itemStyle={{ color: '#10b981', fontSize: '14px', fontWeight: 'bold' }}
                       labelStyle={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 'bold' }}
-                      formatter={(value: number) => [`$${value.toLocaleString()}`, 'Total Comprado']}
+                      formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Total Comprado']}
                     />
                     <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40}>
                       {chartData.map((entry, index) => (
@@ -646,7 +604,20 @@ export function TarjetaDetallePage() {
         />
       )}
 
-      {/* Modal de cierre manual */}
+      {/* Modal de fechas de cierre (las 3 fechas) */}
+      {tarjeta && (
+        <EditFechasCierreModal
+          isOpen={isCierresModalOpen}
+          onClose={() => setIsCierresModalOpen(false)}
+          tarjetaId={tarjeta.id}
+          cierreAnterior={tarjeta.cierreAnterior as string | null}
+          cierreActual={tarjeta.cierreActual as string | null}
+          proximoCierre={tarjeta.proximoCierre as string | null}
+          onSuccess={() => utils.tarjetas.getById.invalidate({ id: id || '' })}
+        />
+      )}
+
+      {/* Modal de cierre manual (para saldar el mes) */}
       {tarjeta && (
         <EditCierreManualModal
           isOpen={isEditCierreOpen}

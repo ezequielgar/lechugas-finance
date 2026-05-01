@@ -11,8 +11,8 @@ import { format, addMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 const schema = z.object({
-  montoActual: z.number({ invalid_type_error: 'Ingresa un monto valido' }).positive('Debe ser positivo'),
-  montoProximo: z.number({ invalid_type_error: 'Ingresa un monto valido' }).nonnegative().optional().nullable(),
+  montoActual: z.number({ message: 'Ingresa un monto valido' }).positive('Debe ser positivo'),
+  montoProximo: z.number({ message: 'Ingresa un monto valido' }).nonnegative().optional().nullable(),
 })
 
 type FormData = z.infer<typeof schema>

@@ -84,9 +84,9 @@ export function TarjetasPage() {
                   <div className="flex items-center gap-3">
                     <div 
                       className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: `${tarjeta.color}15`, border: `1px solid ${tarjeta.color}30` }}
+                      style={{ backgroundColor: `${tarjeta.color ?? '#22c55e'}15`, border: `1px solid ${tarjeta.color ?? '#22c55e'}30` }}
                     >
-                      <Landmark size={20} style={{ color: tarjeta.color }} />
+                      <Landmark size={20} style={{ color: tarjeta.color ?? '#22c55e' }} />
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-100">{tarjeta.nombreTarjeta}</h3>

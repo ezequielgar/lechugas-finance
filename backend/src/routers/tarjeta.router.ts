@@ -11,6 +11,8 @@ const createTarjetaSchema = z.object({
   red: z.enum(['VISA', 'MASTERCARD', 'AMEX', 'CABAL', 'NARANJA', 'OTRA']),
   ultimos4: z.string().max(4).optional(),
   color: z.string().optional(),
+  cierreAnterior: z.string().optional(),
+  cierreActual: z.string().optional(),
   proximoCierre: z.string().optional(),
 })
 
@@ -95,10 +97,12 @@ export const tarjetaRouter = router({
     })
   }),
 
-  /** Actualizar una tarjeta (nombre, próximo cierre) */
+  /** Actualizar una tarjeta (nombre, cierres) */
   update: protectedProcedure
     .input(z.object({
       id: z.string(),
+      cierreAnterior: z.string().optional(),
+      cierreActual: z.string().optional(),
       proximoCierre: z.string().optional(),
       nombreTarjeta: z.string().optional(),
     }))
@@ -109,12 +113,17 @@ export const tarjetaRouter = router({
       if (!tarjeta) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Tarjeta no encontrada' })
       }
+      
+      const dataToUpdate: any = {}
+      if (input.nombreTarjeta !== undefined) dataToUpdate.nombreTarjeta = input.nombreTarjeta
+      // Actualizamos fechas si vienen en el input; usar null si se manda vacío, sino parsear a Date
+      if (input.cierreAnterior !== undefined) dataToUpdate.cierreAnterior = input.cierreAnterior ? new Date(input.cierreAnterior) : null
+      if (input.cierreActual !== undefined) dataToUpdate.cierreActual = input.cierreActual ? new Date(input.cierreActual) : null
+      if (input.proximoCierre !== undefined) dataToUpdate.proximoCierre = input.proximoCierre ? new Date(input.proximoCierre) : null
+
       return ctx.prisma.tarjeta.update({
         where: { id: input.id },
-        data: {
-          proximoCierre: input.proximoCierre ? new Date(input.proximoCierre) : undefined,
-          nombreTarjeta: input.nombreTarjeta || undefined,
-        },
+        data: dataToUpdate,
       })
     }),
 

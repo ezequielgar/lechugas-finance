@@ -59,9 +59,11 @@ model Tarjeta {
   red           RedTarjeta
   ultimos4      String?
   color         String?
-  proximoCierre DateTime?
-  modoSimple    Boolean     @default(false)
-  activa        Boolean     @default(true)
+  cierreAnterior DateTime?
+  cierreActual   DateTime?
+  proximoCierre  DateTime?
+  modoSimple     Boolean     @default(false)
+  activa         Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 

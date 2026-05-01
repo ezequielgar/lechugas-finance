@@ -173,7 +173,8 @@ export function ListaSuperDetallePage() {
                     onToggle={() => toggleMutation.mutate({ itemId: item.id, comprado: !item.comprado })}
                     onDelete={() => deleteMutation.mutate({ itemId: item.id })}
                     onCompare={() => setCompareProducto({ id: item.productoId, nombre: item.producto?.nombre ?? '' })}
-                    onImage={() => setImageProducto({ id: item.productoId, nombre: item.producto?.nombre ?? '', imagen: item.producto?.imagen })}                    onEdit={() => setEditProducto(item.produto ?? null)}                    onEdit={() => setEditProducto(item.producto ?? null)}
+                    onImage={() => setImageProducto({ id: item.productoId, nombre: item.producto?.nombre ?? '', imagen: item.producto?.imagen })}
+                    onEdit={() => setEditProducto(item.producto ?? null)}
                   />
                 ))}
               </div>

@@ -203,7 +203,7 @@ export function DegeneradoFiscalPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#ffffff07" vertical={false} />
               <XAxis
                 dataKey="mes"
-                tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700, textTransform: 'capitalize' }}
+                tick={{ fill: '#64748b', fontSize: 11, fontWeight: 700 }}
                 axisLine={false} tickLine={false}
               />
               <YAxis
@@ -214,7 +214,7 @@ export function DegeneradoFiscalPage() {
               <Tooltip
                 contentStyle={{ background: '#0f172a', border: '1px solid #ffffff12', borderRadius: 12, fontSize: 12, padding: '8px 14px' }}
                 labelStyle={{ color: '#94a3b8', fontWeight: 900, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                formatter={(v: number) => [fmt(v), undefined]}
+                formatter={(v: any) => [fmt(Number(v)), undefined]}
                 cursor={{ fill: '#ffffff05' }}
               />
               <Legend
