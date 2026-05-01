@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { trpc } from '../../../lib/trpc'
 import {
   Plus, DollarSign, Wallet, TrendingDown, TrendingUp,
-  Edit2, Trash2, Eye, EyeOff, RefreshCw, ShoppingBag, ArrowUpCircle, ArrowDownCircle
+  Edit2, Trash2, Eye, EyeOff, RefreshCw, ShoppingBag, ArrowUpCircle, ArrowDownCircle, Calendar, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { Button } from '../../../components/ui/Button'
 import { motion, AnimatePresence } from 'framer-motion'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { AddIngresoModal } from '../components/AddIngresoModal'
 import { AddGastoVariableModal } from '../components/AddGastoVariableModal'
@@ -31,6 +31,15 @@ export function IngresosPage() {
   const [isGastoModalOpen, setIsGastoModalOpen] = useState(false)
   const [editingIngreso, setEditingIngreso] = useState<any>(null)
   const [editingGasto, setEditingGasto] = useState<any>(null)
+  const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()))
+  const [filterEnabled, setFilterEnabled] = useState(false)
+
+  const periodStart = startOfMonth(selectedMonth)
+  const periodEnd = endOfMonth(selectedMonth)
+
+  const handlePrevMonth = () => setSelectedMonth(m => subMonths(m, 1))
+  const handleNextMonth = () => setSelectedMonth(m => addMonths(m, 1))
+  const isCurrentMonth = format(selectedMonth, 'yyyy-MM') === format(new Date(), 'yyyy-MM')
 
   const utils = trpc.useUtils()
 
@@ -65,9 +74,16 @@ export function IngresosPage() {
   }
 
   // ── Cálculos ────────────────────────────────────────────────────────────────
-  const totalCobrado = ingresos?.filter(i => i.activo).reduce((acc, i) => acc + Number(i.monto), 0) || 0
-  const totalPendiente = ingresos?.filter(i => !i.activo).reduce((acc, i) => acc + Number(i.monto), 0) || 0
-  const totalGastos = gastos?.reduce((acc, g) => acc + Number(g.monto), 0) || 0
+  const filteredIngresos = filterEnabled
+    ? ingresos?.filter(i => { const d = new Date(i.fecha); return d >= periodStart && d <= periodEnd })
+    : ingresos
+  const filteredGastos = filterEnabled
+    ? gastos?.filter(g => { const d = new Date(g.fecha); return d >= periodStart && d <= periodEnd })
+    : gastos
+
+  const totalCobrado = filteredIngresos?.filter(i => i.activo).reduce((acc, i) => acc + Number(i.monto), 0) || 0
+  const totalPendiente = filteredIngresos?.filter(i => !i.activo).reduce((acc, i) => acc + Number(i.monto), 0) || 0
+  const totalGastos = filteredGastos?.reduce((acc, g) => acc + Number(g.monto), 0) || 0
   const balance = totalCobrado - totalGastos
 
   const handleDeleteIngreso = (id: string) => {
@@ -91,6 +107,38 @@ export function IngresosPage() {
           </div>
         </div>
         <div className="flex gap-3">
+          {/* Month Picker */}
+          <div className="flex items-center gap-1 bg-surface-900/60 border border-white/10 rounded-2xl px-1 py-1">
+            <button
+              onClick={() => setFilterEnabled(f => !f)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                filterEnabled ? 'bg-brand-500 text-black' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Calendar size={13} />
+              {filterEnabled ? 'Mensual' : 'Histórico'}
+            </button>
+            {filterEnabled && (
+              <>
+                <button
+                  onClick={handlePrevMonth}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <span className="text-sm font-bold text-slate-200 capitalize min-w-[110px] text-center">
+                  {format(selectedMonth, 'MMMM yyyy', { locale: es })}
+                </span>
+                <button
+                  onClick={handleNextMonth}
+                  disabled={isCurrentMonth}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </>
+            )}
+          </div>
           <Button
             variant="ghost"
             onClick={() => { setEditingGasto(null); setIsGastoModalOpen(true) }}
@@ -168,14 +216,14 @@ export function IngresosPage() {
             className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-bold uppercase tracking-widest transition-all ${tab === 'ingresos' ? 'text-green-400 border-b-2 border-green-400 bg-green-500/5' : 'text-slate-500 hover:text-slate-300'}`}
           >
             <ArrowUpCircle size={16} />
-            Ingresos ({ingresos?.length || 0})
+            Ingresos ({filteredIngresos?.length || 0})
           </button>
           <button
             onClick={() => setTab('gastos')}
             className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-bold uppercase tracking-widest transition-all ${tab === 'gastos' ? 'text-red-400 border-b-2 border-red-400 bg-red-500/5' : 'text-slate-500 hover:text-slate-300'}`}
           >
             <ArrowDownCircle size={16} />
-            Gastos Varios ({gastos?.length || 0})
+            Gastos Varios ({filteredGastos?.length || 0})
           </button>
         </div>
 
@@ -197,7 +245,7 @@ export function IngresosPage() {
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     <AnimatePresence>
-                      {ingresos?.map((ingreso) => (
+                      {filteredIngresos?.map((ingreso) => (
                         <motion.tr
                           key={ingreso.id}
                           initial={{ opacity: 0 }}
@@ -253,12 +301,12 @@ export function IngresosPage() {
                       ))}
                     </AnimatePresence>
 
-                    {ingresos?.length === 0 && (
+                    {filteredIngresos?.length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-8 py-20 text-center">
                           <div className="flex flex-col items-center gap-4 text-slate-600 italic">
                             <ShoppingBag size={40} className="opacity-20" />
-                            <p>Todavía no hay ingresos registrados.</p>
+                            <p>No hay ingresos en este período.</p>
                             <Button variant="ghost" onClick={() => setIsIngresoModalOpen(true)}>Cargar el primero</Button>
                           </div>
                         </td>
@@ -286,7 +334,7 @@ export function IngresosPage() {
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     <AnimatePresence>
-                      {gastos?.map((gasto) => (
+                      {filteredGastos?.map((gasto) => (
                         <motion.tr
                           key={gasto.id}
                           initial={{ opacity: 0 }}
@@ -328,12 +376,12 @@ export function IngresosPage() {
                       ))}
                     </AnimatePresence>
 
-                    {gastos?.length === 0 && (
+                    {filteredGastos?.length === 0 && (
                       <tr>
                         <td colSpan={5} className="px-8 py-20 text-center">
                           <div className="flex flex-col items-center gap-4 text-slate-600 italic">
                             <TrendingDown size={40} className="opacity-20" />
-                            <p>No hay gastos variables registrados.</p>
+                            <p>No hay gastos variables en este período.</p>
                             <Button variant="ghost" onClick={() => setIsGastoModalOpen(true)}>Cargar el primero</Button>
                           </div>
                         </td>

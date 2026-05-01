@@ -40,13 +40,30 @@ const getMesPrimeraCuota = (
   const cAct = cierreActualStr ? parseSafeDate(cierreActualStr) : null
   const pc = proximoCierreStr ? parseSafeDate(proximoCierreStr) : null
 
+  // Si la compra es posterior al cierre actual → entra en próximo o siguiente mes
   if (cAct && compraDate.getTime() > cAct.getTime()) {
     if (pc && compraDate.getTime() <= pc.getTime()) {
       return startOfMonth(pc)
     }
     return addMonths(startOfMonth(cAct), 1)
   }
-  return startOfMonth(cAct || compraDate)
+
+  // Si tenemos el día de cierre, calculamos el mes real de la primera cuota
+  // usando ese día como referencia para cualquier fecha pasada
+  if (cAct) {
+    const diaDeCorte = cAct.getDate()
+    // Construimos la fecha de corte del mes de la compra
+    const corteEnMesCompra = new Date(compraDate.getFullYear(), compraDate.getMonth(), diaDeCorte)
+    if (compraDate.getTime() <= corteEnMesCompra.getTime()) {
+      // La compra entró antes del corte → se factura ese mismo mes
+      return startOfMonth(compraDate)
+    } else {
+      // La compra fue después del corte → se factura el mes siguiente
+      return startOfMonth(addMonths(compraDate, 1))
+    }
+  }
+
+  return startOfMonth(compraDate)
 }
 
 export function TarjetaDetallePage() {
@@ -197,48 +214,46 @@ export function TarjetaDetallePage() {
           >
             <ArrowLeft size={18} />
           </motion.button>
-          <div className="space-y-1">
+          <div className="space-y-2">
             <h2 className="text-2xl font-bold tracking-tight text-white">{tarjeta.nombreTarjeta}</h2>
-            <div className="flex items-center gap-3 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span className="flex items-center gap-1.5 py-1 px-2 rounded-lg bg-surface-900 border border-white/5 font-semibold uppercase tracking-wider">
                 <Landmark size={12} className="text-brand-500" /> {tarjeta.nombreEntidad}
               </span>
-              <span className="w-1 h-1 rounded-full bg-slate-700" />
+              <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-700" />
               <span className="font-bold text-slate-400 uppercase tracking-widest">{tarjeta.tipo} {tarjeta.red}</span>
               {tarjeta.ultimos4 && (
                 <>
-                  <span className="w-1 h-1 rounded-full bg-slate-700" />
+                  <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-700" />
                   <span className="font-mono bg-slate-800/50 px-2 py-0.5 rounded-md text-slate-400 text-[10px]">•••• {tarjeta.ultimos4}</span>
                 </>
               )}
-              <span className="w-1 h-1 rounded-full bg-slate-700" />
-              
-              <div 
-                className="flex items-center gap-3 bg-surface-900 border border-white/5 py-1 px-3 rounded-lg cursor-pointer hover:bg-white/5 transition-colors"
-                onClick={() => setIsCierresModalOpen(true)}
-                title="Configurar fechas de cierre"
-              >
-                 <span className="text-[10px] uppercase font-bold text-slate-500">Cierres:</span>
-                 {tarjeta.cierreAnterior && (
-                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                      Ant: <span className="text-white">{format(parseSafeDate(tarjeta.cierreAnterior), 'dd MMM', { locale: es })}</span>
-                   </span>
-                 )}
-                 {tarjeta.cierreActual && (
-                   <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest flex items-center gap-1">
-                      Act: <span className="text-white">{format(parseSafeDate(tarjeta.cierreActual), 'dd MMM', { locale: es })}</span>
-                   </span>
-                 )}
-                 {tarjeta.proximoCierre && (
-                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                      Próx: <span className="text-white">{format(parseSafeDate(tarjeta.proximoCierre), 'dd MMM', { locale: es })}</span>
-                   </span>
-                 )}
-                 {(!tarjeta.cierreAnterior && !tarjeta.cierreActual && !tarjeta.proximoCierre) && (
-                   <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest">Configurar Fechas</span>
-                 )}
-                 <Edit2 size={10} className="text-slate-500 ml-1" />
-              </div>
+            </div>
+            <div 
+              className="flex items-center gap-2 flex-wrap bg-surface-900 border border-white/5 py-1.5 px-3 rounded-lg cursor-pointer hover:bg-white/5 transition-colors w-fit"
+              onClick={() => setIsCierresModalOpen(true)}
+              title="Configurar fechas de cierre"
+            >
+              <span className="text-[10px] uppercase font-bold text-slate-500">Cierres:</span>
+              {tarjeta.cierreAnterior && (
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                  Ant: <span className="text-white">{format(parseSafeDate(tarjeta.cierreAnterior), 'dd MMM', { locale: es })}</span>
+                </span>
+              )}
+              {tarjeta.cierreActual && (
+                <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest flex items-center gap-1">
+                  Act: <span className="text-white">{format(parseSafeDate(tarjeta.cierreActual), 'dd MMM', { locale: es })}</span>
+                </span>
+              )}
+              {tarjeta.proximoCierre && (
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                  Próx: <span className="text-white">{format(parseSafeDate(tarjeta.proximoCierre), 'dd MMM', { locale: es })}</span>
+                </span>
+              )}
+              {(!tarjeta.cierreAnterior && !tarjeta.cierreActual && !tarjeta.proximoCierre) && (
+                <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest">Configurar Fechas</span>
+              )}
+              <Edit2 size={10} className="text-slate-500 ml-1" />
             </div>
           </div>
         </div>
@@ -304,7 +319,7 @@ export function TarjetaDetallePage() {
                         >
                           <td className="px-8 py-5">
                             <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${isSaldado ? 'text-slate-600 bg-slate-800/50' : 'text-slate-400 bg-white/5'}`}>
-                              {format(new Date(compra.fechaCompra), 'dd MMM', { locale: es })}
+                              {format(new Date(compra.fechaCompra), 'dd/MM/yy')}
                             </span>
                           </td>
                           <td className="px-8 py-5">

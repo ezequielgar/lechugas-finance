@@ -52,18 +52,19 @@ export function EditFechasCierreModal({ isOpen, onClose, tarjetaId, cierreAnteri
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
             onClick={onClose}
-          />
+          >
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
-            className="fixed inset-x-0 bottom-0 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full sm:max-w-md bg-surface-900 border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl z-50 overflow-hidden max-h-[90dvh] overflow-y-auto"
+            className="w-full sm:max-w-md bg-surface-900 border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[85vh]"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02] flex-shrink-0 rounded-t-3xl sm:rounded-t-3xl">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-400">
+                <div className="w-10 h-10 rounded-2xl bg-brand-500/30 flex items-center justify-center text-brand-300">  
                   <CalendarIcon size={20} />
                 </div>
                 <div>
@@ -79,7 +80,7 @@ export function EditFechasCierreModal({ isOpen, onClose, tarjetaId, cierreAnteri
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1 pb-safe">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">
@@ -128,6 +129,7 @@ export function EditFechasCierreModal({ isOpen, onClose, tarjetaId, cierreAnteri
                 </Button>
               </div>
             </form>
+          </motion.div>
           </motion.div>
         </>
       )}

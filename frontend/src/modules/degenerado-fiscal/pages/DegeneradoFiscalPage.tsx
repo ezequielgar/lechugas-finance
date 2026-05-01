@@ -14,6 +14,7 @@ export function DegeneradoFiscalPage() {
   const { data: gastoServices = [] } = trpc.gastosFijos.getMany.useQuery()
   const { data: creditos = [] } = trpc.creditos.getMany.useQuery()
   const { data: proyectos = [] } = trpc.proyectos.getMany.useQuery()
+  const { data: gastosVariables = [] } = trpc.gastosVariables.getMany.useQuery()
 
   const ingresosRaw = ingresos as any[]
   const gastosRaw = gastoServices as any[]
@@ -70,42 +71,34 @@ export function DegeneradoFiscalPage() {
 
   const balance = totalIngresos - totalGastos
 
-  // Últimos 6 meses para el gráfico
+  // ── Totales de Flujo de Caja (para los mini cards del resumen) ───────────
+  const gastosVariablesRaw = gastosVariables as any[]
+  const currentMonthGastosVariables = gastosVariablesRaw.filter(g => {
+    const d = new Date(g.fecha)
+    return d.getMonth() === currentM && d.getFullYear() === currentY
+  })
+  const totalIngresosActivos = currentMonthIngresos.filter(i => i.activo).reduce((s, i) => s + Number(i.monto), 0)
+  const totalGastosVars = currentMonthGastosVariables.reduce((s, g) => s + Number(g.monto), 0)
+  const balanceFlujo = totalIngresosActivos - totalGastosVars
+
+  // Últimos 6 meses para el gráfico (usando gastosVariables para consistencia con Flujo de Caja)
   const monthlyData = useMemo(() => {
-    const registros = (gastoServices as any[]).flatMap((s: any) => s.registros ?? [])
-    const cuotas = (creditos as any[]).flatMap((c: any) => c.pagos ?? [])
-    const gastosProyecto = (proyectos as any[]).flatMap((p: any) => p.gastos ?? [])
     return Array.from({ length: 6 }, (_, i) => {
       const date = subMonths(new Date(), 5 - i)
       const m = date.getMonth()
       const y = date.getFullYear()
 
       const monthIngresos = (ingresos as any[])
-        .filter(ing => { const d = new Date(ing.fecha); return d.getMonth() === m && d.getFullYear() === y })
+        .filter(ing => ing.activo && (() => { const d = new Date(ing.fecha); return d.getMonth() === m && d.getFullYear() === y })())
         .reduce((s, ing) => s + Number(ing.monto), 0)
 
-      const monthGastosServicios = registros
-        .filter((r: any) => { const d = r.fechaVencimiento ? new Date(r.fechaVencimiento) : new Date(r.fecha); return d.getMonth() === m && d.getFullYear() === y })
-        .reduce((s: number, r: any) => s + Number(r.monto), 0)
-
-      const monthGastosCuotas = cuotas
-        .filter((c: any) => {
-          if (c.pagado && c.fechaPagado) {
-            const d = new Date(c.fechaPagado)
-            return d.getMonth() === m && d.getFullYear() === y
-          }
-          const d = new Date(c.fechaPago)
-          return d.getMonth() === m && d.getFullYear() === y
-        })
-        .reduce((s: number, c: any) => s + Number(c.monto), 0)
-
-      const monthGastosProyecto = gastosProyecto
+      const monthGastos = (gastosVariables as any[])
         .filter((g: any) => { const d = new Date(g.fecha); return d.getMonth() === m && d.getFullYear() === y })
         .reduce((s: number, g: any) => s + Number(g.monto), 0)
 
-      return { mes: format(date, 'MMM', { locale: es }), Ingresos: monthIngresos, Gastos: monthGastosServicios + monthGastosCuotas + monthGastosProyecto }
+      return { mes: format(date, 'MMM', { locale: es }), Ingresos: monthIngresos, Gastos: monthGastos }
     })
-  }, [ingresos, gastoServices, creditos, proyectos])
+  }, [ingresos, gastosVariables])
 
   // Próximas facturas/cuotas a vencer (15 días)
   const upcomingBills = [
@@ -176,20 +169,20 @@ export function DegeneradoFiscalPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="card p-4">
             <p className="text-[10px] font-black text-brand-500 uppercase tracking-widest mb-2">Ingresos</p>
-            <p className="text-2xl font-black text-white tabular-nums">{fmt(totalIngresos)}</p>
+            <p className="text-2xl font-black text-white tabular-nums">{fmt(totalIngresosActivos)}</p>
             <p className="text-[10px] text-slate-600 mt-1 font-bold uppercase">Este mes</p>
           </div>
           <div className="card p-4 bg-gradient-to-br from-yellow-500/5 to-transparent border-yellow-500/15">
             <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-2">Gastos</p>
-            <p className="text-2xl font-black text-yellow-400 tabular-nums">{fmt(totalGastos)}</p>
+            <p className="text-2xl font-black text-yellow-400 tabular-nums">{fmt(totalGastosVars)}</p>
             <p className="text-[10px] text-slate-600 mt-1 font-bold uppercase">Este mes</p>
           </div>
           <div className={cn(
             'card p-4 bg-gradient-to-br to-transparent',
-            balance >= 0 ? 'from-green-500/5 border-green-500/15' : 'from-red-500/5 border-red-500/15'
+            balanceFlujo >= 0 ? 'from-green-500/5 border-green-500/15' : 'from-red-500/5 border-red-500/15'
           )}>
-            <p className={cn('text-[10px] font-black uppercase tracking-widest mb-2', balance >= 0 ? 'text-green-500' : 'text-red-500')}>Balance</p>
-            <p className={cn('text-2xl font-black tabular-nums', balance >= 0 ? 'text-green-400' : 'text-red-400')}>{fmt(balance)}</p>
+            <p className={cn('text-[10px] font-black uppercase tracking-widest mb-2', balanceFlujo >= 0 ? 'text-green-500' : 'text-red-500')}>Balance</p>
+            <p className={cn('text-2xl font-black tabular-nums', balanceFlujo >= 0 ? 'text-green-400' : 'text-red-400')}>{fmt(balanceFlujo)}</p>
             <p className="text-[10px] text-slate-600 mt-1 font-bold uppercase">Ingresos − Gastos</p>
           </div>
         </div>
@@ -297,11 +290,11 @@ export function DegeneradoFiscalPage() {
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado Actual</h3>
           <div className="space-y-2.5">
             {[
-              { label: 'Disponible', value: balance, icon: Wallet, color: balance >= 0 ? 'text-brand-400' : 'text-red-400' },
-              { label: 'Total Ingresos', value: totalIngresos, icon: TrendingDown, color: 'text-blue-400' },
-              { label: 'Pagado (servicios + cuotas)', value: totalGastosPagados, icon: CheckCircle2, color: 'text-green-400' },
-              { label: 'Pendiente', value: totalGastos - totalGastosPagados, icon: AlertCircle, color: 'text-yellow-400' },
-              { label: 'Total Gastos + Créditos', value: totalGastos, icon: TrendingUp, color: 'text-red-400' },
+              { label: 'Disponible', value: balanceFlujo, icon: Wallet, color: balanceFlujo >= 0 ? 'text-brand-400' : 'text-red-400' },
+              { label: 'Total Ingresos', value: totalIngresosActivos, icon: TrendingDown, color: 'text-blue-400' },
+              { label: 'Ingresos pendientes', value: ingresosRaw.filter(i => new Date(i.fecha) > now).reduce((s, i) => s + Number(i.monto), 0), icon: AlertCircle, color: 'text-yellow-400' },
+              { label: 'Total Gastos Variables', value: totalGastosVars, icon: TrendingUp, color: 'text-red-400' },
+              { label: 'Balance Neto', value: balanceFlujo, icon: balanceFlujo >= 0 ? CheckCircle2 : TrendingDown, color: balanceFlujo >= 0 ? 'text-green-400' : 'text-red-400' },
             ].map(item => (
               <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-surface-900/50 border border-white/5">
                 <div className="flex items-center gap-3">

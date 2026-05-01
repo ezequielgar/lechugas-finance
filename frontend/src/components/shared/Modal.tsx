@@ -35,18 +35,18 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
           />
 
           {/* Dialog */}
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-[101] flex items-end sm:items-center justify-center sm:p-4 pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className={cn(
-                "w-full max-w-md bg-surface-900 border border-white/10 rounded-2xl shadow-2xl pointer-events-auto overflow-hidden",
+                "w-full sm:max-w-md bg-surface-900 border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl pointer-events-auto flex flex-col max-h-[92dvh] sm:max-h-[90vh]",
                 className
               )}
             >
               {/* Header */}
-              <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-surface-800/50">
+              <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-surface-800/50 flex-shrink-0">
                 <h3 className="text-lg font-bold text-slate-100">{title}</h3>
                 <button
                   onClick={onClose}
@@ -57,7 +57,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
               </div>
 
               {/* Content */}
-              <div className="p-6">
+              <div className="p-6 overflow-y-auto flex-1">
                 {children}
               </div>
             </motion.div>
